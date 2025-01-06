@@ -3,19 +3,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from databases import Database
 
-# Define your SQLite database URL, including the database file name
-DATABASE_URL = "sqlite:///./app.db"
+# PostgreSQL URL format: 'postgresql://user:password@host:port/dbname'
+DATABASE_URL = "postgresql://username:password@localhost/dbname"
 
-# Create a new SQLAlchemy engine instance
-engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
-)
-
-# Create a session local class
+engine = create_engine(DATABASE_URL)
+Base = declarative_base()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Define a base class for all models
-Base = declarative_base()
-
-# Define the asynchronous database connection
-database = Database(DATABASE_URL)  # This should be present for asynchronous database handling
+database = Database(DATABASE_URL)

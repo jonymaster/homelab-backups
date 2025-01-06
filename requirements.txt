@@ -5,3 +5,7 @@ sqlalchemy
 databases
 apscheduler
 aiosqlite
+asyncpg
+databases
+sqlalchemy
+alembic
