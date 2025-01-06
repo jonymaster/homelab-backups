@@ -4,6 +4,16 @@ from app.routes.backup_job import router as backup_job_router  # Import the back
 from app.routes.backup_result import router as backup_result_router  # If applicable
 from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
+
+def check_jobs_status():
+    # Process to check job status and update database
+    pass
+
+# Initialize Scheduler in main.py
+scheduler = BackgroundScheduler()
+scheduler.add_job(check_jobs_status, 'interval', minutes=30)
+scheduler.start()
 
 # Use lifespan for handling startup and shutdown events
 @asynccontextmanager
