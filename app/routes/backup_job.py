@@ -5,11 +5,11 @@ from app.db.session import get_db
 from app.models.models import BackupJob
 from app.models.schemas import BackupJobCreate, BackupJobRead
 
-router = APIRouter(prefix="/jobs")
+router = APIRouter()
 
 @router.post("/jobs/", response_model=BackupJobRead)
 def create_job(job: BackupJobCreate, db: Session = Depends(get_db)):
-    db_job = BackupJob(**job.dict())
+    db_job = BackupJob(**job.model_dump())
     db.add(db_job)
     db.commit()
     db.refresh(db_job)

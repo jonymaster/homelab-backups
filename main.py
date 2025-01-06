@@ -1,22 +1,9 @@
 from fastapi import FastAPI
 from app.db.session import engine, database, Base
-from app.routes import backup_job, backup_result
+from app.routes.backup_job import router as backup_job_router  # Import the backup_job router
+from app.routes.backup_result import router as backup_result_router  # If applicable
 from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
-
-# Create the FastAPI app instance
-app = FastAPI()
-
-# Create all tables in the database
-Base.metadata.create_all(bind=engine)
-
-# Include the routers for backup jobs and backup results
-app.include_router(backup_job.router)
-app.include_router(backup_result.router)
-
-# Initialize and start APScheduler (for scheduling tasks)
-scheduler = BackgroundScheduler()
-scheduler.start()
 
 # Use lifespan for handling startup and shutdown events
 @asynccontextmanager
@@ -27,7 +14,19 @@ async def app_lifespan(app: FastAPI):
     # Shutdown: actions to perform at shutdown
     await database.disconnect()
 
+# Initialize FastAPI app with lifespan
 app = FastAPI(lifespan=app_lifespan)
+
+# Create all tables in the database
+Base.metadata.create_all(bind=engine)
+
+# Include the routers
+app.include_router(backup_job_router)  # Include the router for backup jobs
+app.include_router(backup_result_router)  # Include the router for backup results
+
+# Initialize and start APScheduler (for scheduling tasks)
+scheduler = BackgroundScheduler()
+scheduler.start()
 
 @app.get("/")
 async def root():

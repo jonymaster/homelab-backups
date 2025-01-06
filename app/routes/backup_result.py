@@ -5,7 +5,7 @@ from app.db.session import get_db
 from app.models.models import BackupResult
 from app.models.schemas import BackupResultCreate, BackupResultRead
 
-router = APIRouter(prefix="/results")
+router = APIRouter()
 
 @router.post("/results/", response_model=BackupResultRead)
 def create_result(result: BackupResultCreate, db: Session = Depends(get_db)):
