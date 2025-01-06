@@ -6,9 +6,6 @@ class BackupJobBase(BaseModel):
     destination: str
     schedule: str
 
-class BackupJobCreate(BackupJobBase):
-    pass
-
 class BackupJobRead(BackupJobBase):
     id: int
 
