@@ -8,7 +8,7 @@ def execute_backup(source, destination):
     try:
         # Command to execute rdiff-backup
         command = ["rdiff-backup", source, destination]
-        
+
         # Execute the rdiff-backup command
         result = subprocess.run(command, check=True, capture_output=True, text=True)
 

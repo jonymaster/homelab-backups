@@ -3,12 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.db.session import get_db
 from app.models.models import BackupResult
-from app.models.schemas import BackupResultCreate, BackupResultRead
+from app.models.schemas import BackupResultBase, BackupResultRead
 
 router = APIRouter()
 
 @router.post("/results/", response_model=BackupResultRead)
-def create_result(result: BackupResultCreate, db: Session = Depends(get_db)):
+def create_result(result: BackupResultRead, db: Session = Depends(get_db)):
     db_result = BackupResult(**result.dict())
     db.add(db_result)
     db.commit()

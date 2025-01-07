@@ -1,44 +1,39 @@
 from fastapi import FastAPI
-from app.db.session import engine, database, Base
-from app.routes.backup_job import router as backup_job_router  # Import the backup_job router
-from app.routes.backup_result import router as backup_result_router  # If applicable
-from apscheduler.schedulers.background import BackgroundScheduler
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
+
+from app.db.session import engine, database, Base
+from app.routes.backup_job import router as backup_job_router
+from app.routes.backup_result import router as backup_result_router
+from app.utils.scheduler_service import schedule_all_jobs
 
 def check_jobs_status():
     # Process to check job status and update database
     pass
 
-# Initialize Scheduler in main.py
+# Initialize Scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_jobs_status, 'interval', minutes=30)
-scheduler.start()
 
-# Use lifespan for handling startup and shutdown events
 @asynccontextmanager
-async def app_lifespan(app: FastAPI):
-    # Startup: actions to perform at startup
+async def lifespan(app: FastAPI):
+    # Actions before the app starts
     await database.connect()
+    schedule_all_jobs()  # Schedule jobs on startup
     yield
-    # Shutdown: actions to perform at shutdown
+    # Actions after the app shuts down
     await database.disconnect()
 
-# Initialize FastAPI app with lifespan
-app = FastAPI(lifespan=app_lifespan)
+# Initialize FastAPI with the lifespan event handler
+app = FastAPI(lifespan=lifespan)
 
 # Create all tables in the database
 Base.metadata.create_all(bind=engine)
 
-# Include the routers
-app.include_router(backup_job_router)  # Include the router for backup jobs
-app.include_router(backup_result_router)  # Include the router for backup results
-
-# Initialize and start APScheduler (for scheduling tasks)
-scheduler = BackgroundScheduler()
-scheduler.start()
+# Include the routers for the API
+app.include_router(backup_job_router)
+app.include_router(backup_result_router)
 
 @app.get("/")
 async def root():
-    # A simple root endpoint
     return {"message": "Welcome to the Backup Management API"}

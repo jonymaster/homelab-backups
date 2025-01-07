@@ -4,7 +4,7 @@ from app.db.session import Base
 
 class BackupJob(Base):
     __tablename__ = 'backup_jobs'
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     source = Column(String, index=True)
