@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from datetime import datetime
 from typing import List
 from app.db.session import get_db
-from app.models.models import BackupJob
-from app.models.schemas import BackupJobBase, BackupJobRead  # Ensure correct usage
+from app.models.models import BackupJob, BackupResult  # Import necessary models
+from app.models.schemas import BackupJobBase, BackupJobRead
 from app.utils.scheduler_service import add_job, remove_job
 from app.utils.backup_utils import execute_backup
 
@@ -39,9 +40,18 @@ def execute_job(job_id: int, db: Session = Depends(get_db)):
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    execute_backup(job.source, job.destination)
+    # Execute the backup and capture the status and message
+    status, message = execute_backup(job.source, job.destination)
 
-    return {"message": "Job executed successfully"}
+    # Capture the current time for the result
+    timestamp = datetime.now().isoformat()
+
+    # Create and save a BackupResult
+    job_result = BackupResult(job_id=job.id, timestamp=timestamp, status=status, result=message)
+    db.add(job_result)
+    db.commit()
+
+    return {"message": message}
 
 @router.delete("/jobs/{job_id}", response_model=dict)
 def delete_job(job_id: int, db: Session = Depends(get_db)):
