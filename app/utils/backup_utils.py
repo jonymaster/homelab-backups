@@ -10,10 +10,10 @@ def execute_backup(job_id):
     job = db.query(BackupJob).filter_by(id=job_id).first()
     if not job:
         logging.error(f"No job found with ID: {job_id}")
-        return
+        return "failed", f"No job found with ID: {job_id}"  # Return tuple on error
 
     # Update job status as running
-    job.current_status = "running"
+    job.status = "running"
     db.commit()
 
     try:
@@ -29,10 +29,12 @@ def execute_backup(job_id):
         status = "failed"
         message = f"Backup failed: {e.stderr}"
 
-    # Update job status to complete and log result
+    # Update job status to completed or failed and log result
     job.status = "complete" if status == "success" else "failed"
     job_result = BackupResult(job_id=job_id, timestamp=datetime.now().isoformat(), status=status, result=message)
     db.add(job_result)
     db.commit()
 
     logging.info(message)
+
+    return status, message  # Ensure consistent return of (status, message) tuple
