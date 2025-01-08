@@ -1,8 +1,8 @@
 import subprocess
 import logging
 from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.models.models import BackupJob, BackupResult
+from db.session import get_db
+from models.models import BackupJob, BackupResult
 from datetime import datetime
 
 def execute_backup(job_id):

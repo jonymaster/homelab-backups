@@ -13,19 +13,18 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # Set tini as the entrypoint
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy the requirements file and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy files from the build context (project root)
+COPY ../app/requirements.txt .
+COPY ../app ./
+COPY ../app/main.py ./
 
-# Copy the application code
-COPY ./app ./app
-COPY ./main.py ./main.py
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose the application port
 EXPOSE 8686
 
-# Run the application server
+# Run cron and the uvicorn server
 CMD ["sh", "-c", "cron && uvicorn main:app --host 0.0.0.0 --port 8686"]
