@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.session import Base
+from db.session import Base
 
 class BackupJob(Base):
     __tablename__ = 'backup_jobs'

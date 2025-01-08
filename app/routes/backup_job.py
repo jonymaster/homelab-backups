@@ -2,11 +2,11 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
-from app.db.session import get_db
-from app.models.models import BackupJob, BackupResult  # Import necessary models
-from app.models.schemas import BackupJobBase, BackupJobRead
-from app.utils.scheduler_service import add_job, remove_job
-from app.utils.backup_utils import execute_backup
+from db.session import get_db
+from models.models import BackupJob, BackupResult  # Import necessary models
+from models.schemas import BackupJobBase, BackupJobRead
+from utils.scheduler_service import add_job, remove_job
+from utils.backup_utils import execute_backup
 
 router = APIRouter()
 

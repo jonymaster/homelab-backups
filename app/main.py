@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
-from app.utils.scheduler_service import schedule_all_jobs
-from app.db.session import engine, database, Base
-from app.routes.backup_job import router as backup_job_router
-from app.routes.backup_result import router as backup_result_router
+from utils.scheduler_service import schedule_all_jobs
+from db.session import engine, database, Base
+from routes.backup_job import router as backup_job_router
+from routes.backup_result import router as backup_result_router
 
 def check_jobs_status():
     # Process to check job status and update database
