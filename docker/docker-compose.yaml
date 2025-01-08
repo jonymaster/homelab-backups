@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  homelab-backups:
+    image: homelab-backups
+    container_name: homelab-backups-container
+    ports:
+      - "8686:8686"
+    volumes:
+      - /home/jony/backup_test:/app/backup_test:ro
+      - /mnt/usb/backup:/app/backup_dest
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Europe/Paris  # Adjust the timezone as necessary
+    restart: unless-stopped
