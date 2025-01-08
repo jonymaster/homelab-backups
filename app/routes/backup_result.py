@@ -7,14 +7,6 @@ from app.models.schemas import BackupResultBase, BackupResultRead
 
 router = APIRouter()
 
-@router.post("/results/", response_model=BackupResultRead)
-def create_result(result: BackupResultRead, db: Session = Depends(get_db)):
-    db_result = BackupResult(**result.dict())
-    db.add(db_result)
-    db.commit()
-    db.refresh(db_result)
-    return db_result
-
 @router.get("/results/", response_model=List[BackupResultRead])
 def list_results(db: Session = Depends(get_db)):
     return db.query(BackupResult).all()

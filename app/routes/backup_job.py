@@ -43,14 +43,14 @@ def execute_job(job_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Job not found")
 
     # Execute the backup and capture the status and message
-    status, message = execute_backup(job.source, job.destination)
+    status, message = execute_backup(job.id)
 
     # Capture the current time for the result
     timestamp = datetime.now().isoformat()
 
     # Create and save a BackupResult
     job_result = BackupResult(job_id=job.id, timestamp=timestamp, status=status, result=message)
-    db.add(job_result)
+    #db.add(job_result)
     db.commit()
 
     return {"message": message}
