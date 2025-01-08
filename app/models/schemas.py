@@ -18,6 +18,7 @@ class BackupResultBase(BaseModel):
     timestamp: str
     status: str
     result: str
+    job_id: int
 
 class BackupResultRead(BackupResultBase):
     id: int
