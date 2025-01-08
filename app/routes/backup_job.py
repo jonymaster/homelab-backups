@@ -11,7 +11,7 @@ from app.utils.backup_utils import execute_backup
 router = APIRouter()
 
 @router.post("/jobs/", response_model=BackupJobRead)
-def create_job(job: BackupJobBase, db: Session = Depends(get_db)):
+def create_backup_job(job: BackupJobBase, db: Session = Depends(get_db)):
     db_job = BackupJob(**job.model_dump())
     db.add(db_job)
     db.commit()
@@ -22,13 +22,35 @@ def create_job(job: BackupJobBase, db: Session = Depends(get_db)):
 
     return db_job
 
+@router.put("/jobs/{job_id}", response_model=BackupJobRead)
+def update_backup_job(job_id: int, updated_job: BackupJobBase, db: Session = Depends(get_db)):
+    db_job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Update job fields
+    db_job.name = updated_job.name
+    db_job.source = updated_job.source
+    db_job.destination = updated_job.destination
+    db_job.schedule = updated_job.schedule
+
+    db.commit()
+    db.refresh(db_job)
+
+    # Update the scheduled task
+    remove_job(job_id)  # Remove previous scheduled job
+    cron_args = parse_schedule(updated_job.schedule)
+    add_job(db_job.id, cron_args)
+
+    return db_job
+
 @router.get("/jobs/", response_model=List[BackupJobRead])
-def get_all_jobs(db: Session = Depends(get_db)):
+def get_all_backup_jobs(db: Session = Depends(get_db)):
     jobs = db.query(BackupJob).all()
     return jobs
 
 @router.get("/jobs/{job_id}", response_model=BackupJobRead)
-def get_job(job_id: int, db: Session = Depends(get_db)):
+def get_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -37,7 +59,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     return job_info
 
 @router.post("/jobs/{job_id}/execute", response_model=dict)
-def execute_job(job_id: int, db: Session = Depends(get_db)):
+def execute_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -56,7 +78,7 @@ def execute_job(job_id: int, db: Session = Depends(get_db)):
     return {"message": message}
 
 @router.delete("/jobs/{job_id}", response_model=dict)
-def delete_job(job_id: int, db: Session = Depends(get_db)):
+def delete_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
