@@ -11,11 +11,19 @@ engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False}
 )
 
-# Create a session local class
+# Create a session local class for synchronous database operations
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Define a base class for all models
+# Define a base class for your models using SQLAlchemy's declarative system
 Base = declarative_base()
 
 # Define the asynchronous database connection
-database = Database(DATABASE_URL)  # This should be present for asynchronous database handling
+database = Database(DATABASE_URL)
+
+# Dependency to get a database session for use within FastAPI routes
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
