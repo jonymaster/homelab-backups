@@ -10,6 +10,7 @@ class BackupJob(Base):
     source = Column(String, index=True)
     destination = Column(String, index=True)
     schedule = Column(String, index=True)  # cron format
+    status = Column(String, default="pending")
 
     results = relationship('BackupResult', back_populates='backup_job')
 

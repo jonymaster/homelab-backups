@@ -18,7 +18,7 @@ def create_job(job: BackupJobBase, db: Session = Depends(get_db)):
     db.refresh(db_job)
 
     cron_args = parse_schedule(job.schedule)
-    add_job(db_job.id, execute_backup, cron_args, job.source, job.destination)
+    add_job(db_job.id, cron_args)
 
     return db_job
 
@@ -32,7 +32,9 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    return job
+    # Use model_validate to convert ORM to Pydantic model
+    job_info = BackupJobRead.model_validate(job)
+    return job_info
 
 @router.post("/jobs/{job_id}/execute", response_model=dict)
 def execute_job(job_id: int, db: Session = Depends(get_db)):
