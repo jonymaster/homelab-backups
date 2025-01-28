@@ -176,3 +176,4 @@ cython_debug/
 #Misc
 alembic/
 app/app.db
+app.db

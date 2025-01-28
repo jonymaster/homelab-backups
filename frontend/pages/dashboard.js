@@ -4,24 +4,22 @@ import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRo
 export default function Dashboard({ jobs }) {
   const handleStartJob = async (jobId) => {
     try {
-      const response = await fetch(`http://localhost:8686/jobs/${jobId}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // Adjust headers based on your API requirements
-        },
+      const response = fetch(`http://localhost:8686/jobs/${jobId}/execute`, {
+        method: 'POST'
+        // headers: {
+        //   'Content-Type': 'application/json',
+        // },
       });
-
       if (!response.ok) {
-        throw new Error(`Failed to start job ${jobId}: ${response.statusText}`);
+        console.error(`Failed to start job ${jobId}: ${response.statusText}`);
+      } else {
+          console.log(`Job ${jobId} started successfully`);
       }
-
-      const data = await response.json();
-      console.log('Job started successfully:', data);
     } catch (error) {
-      console.error('Error starting job:', error);
+      console.error(`Network error when attempting to start job ${jobId}:`, error);
     }
   };
-
+  
   const handleStopJob = async (jobId) => {
     try {
       const response = await fetch(`http://localhost:8686/api/jobs/${jobId}/stop`, {
@@ -91,7 +89,7 @@ export default function Dashboard({ jobs }) {
 }
 
 export async function getServerSideProps() {
-  const res = await fetch('http://localhost:8686/jobs');
+  const res = await fetch('http://localhost:8686/jobs/');
   
   if (!res.ok) {
     console.error("Failed to fetch job data from the API");
@@ -101,7 +99,7 @@ export async function getServerSideProps() {
   const jobs = await res.json();
 
   const jobsWithResults = await Promise.all(jobs.map(async (job) => {
-    const res = await fetch(`http://localhost:8686/jobs/${job.id}/results`);
+    const res = await fetch(`http://localhost:8686/jobs/${job.id}/results/`);
     if (!res.ok) {
       console.error(`Failed to fetch results for job: ${job.id}`);
       return { ...job, lastRun: "N/A" };

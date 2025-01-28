@@ -1,101 +1,208 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { BackupJob, BackupResult } from "../types";
+import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [jobs, setJobs] = useState<BackupJob[]>([]);
+  const [results, setResults] = useState<BackupResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const fetchData = async () => {
+    try {
+      const [jobsResponse, resultsResponse] = await Promise.all([
+        fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/`),
+        fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/results/`),
+      ]);
+
+      if (!jobsResponse.ok || !resultsResponse.ok) {
+        throw new Error("Failed to fetch data");
+      }
+
+      const jobsData = await jobsResponse.json();
+      const resultsData = await resultsResponse.json();
+
+      setJobs(jobsData);
+      setResults(resultsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const executeBackup = async (jobId: number) => {
+    setError(null);
+    try {
+      const response = await fetch(
+        `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}/execute`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to execute backup");
+      await fetchData(); // Refresh data after execution
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    }
+  };
+
+  const handleActionClick = (
+    jobId: number,
+    action: "edit" | "run" | "delete"
+  ) => {
+    setActiveDropdown(null);
+    switch (action) {
+      case "run":
+        executeBackup(jobId);
+        break;
+      case "delete":
+        // TODO: Implement delete
+        break;
+      case "edit":
+        // TODO: Implement edit
+        break;
+    }
+  };
+
+  const getLatestResultForJob = (jobId: number) => {
+    const jobResults = results
+      .filter((result) => result.job_id === jobId)
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+    return jobResults[0];
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  };
+
+  if (isLoading)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+      </div>
+    );
+
+  return (
+    <div className="min-h-screen p-8 bg-gray-900 text-gray-100">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Backup Jobs</h1>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-900/50 text-red-200 rounded-lg border border-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+          {jobs.map((job) => {
+            const latestResult = getLatestResultForJob(job.id);
+
+            return (
+              <div
+                key={job.id}
+                className="flex items-center justify-between p-4 border-b border-gray-700 last:border-b-0 hover:bg-gray-700/50"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-2">
+                    <h2 className="text-lg font-semibold text-gray-100">
+                      {job.name}
+                    </h2>
+                    {latestResult && (
+                      <span
+                        className={`text-sm px-2 py-1 rounded-full ${
+                          latestResult.status === "success"
+                            ? "bg-green-900/50 text-green-400"
+                            : "bg-red-900/50 text-red-400"
+                        }`}
+                      >
+                        {latestResult.status}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-400">
+                    <div>
+                      <p>Schedule: {job.schedule}</p>
+                      <p>Source: {job.source}</p>
+                    </div>
+                    {latestResult && (
+                      <div>
+                        <p>
+                          Last run: {formatTimestamp(latestResult.timestamp)}
+                        </p>
+                        {latestResult.result && (
+                          <p
+                            className="truncate max-w-md"
+                            title={latestResult.result}
+                          >
+                            {latestResult.result.split("\n")[0]}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() =>
+                      setActiveDropdown(
+                        activeDropdown === job.id ? null : job.id
+                      )
+                    }
+                    className="p-2 hover:bg-gray-600 rounded-full"
+                  >
+                    <EllipsisVerticalIcon className="h-5 w-5 text-gray-400" />
+                  </button>
+
+                  {activeDropdown === job.id && (
+                    <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 z-10">
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleActionClick(job.id, "run")}
+                          className="w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 text-left"
+                        >
+                          Run Now
+                        </button>
+                        <button
+                          onClick={() => handleActionClick(job.id, "edit")}
+                          className="w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 text-left"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleActionClick(job.id, "delete")}
+                          className="w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-700 text-left"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }

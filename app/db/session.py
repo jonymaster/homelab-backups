@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from databases import Database
 
 # Define your SQLite database URL, including the database file name
-DATABASE_URL = "sqlite:///./app.db"
+DATABASE_URL = "sqlite:///./db/app.db"  # Ensure this path matches the volume mount
 
 # Create a new SQLAlchemy engine instance
 engine = create_engine(
