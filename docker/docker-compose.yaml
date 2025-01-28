@@ -1,15 +1,30 @@
-version: '3.8'
-
 services:
-  homelab-backups:
-    image: homelab-backups
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
     container_name: homelab-backups-container
     ports:
       - "8686:8686"
     volumes:
-      - /home/jony/backup_test:/app/backup_test:ro
-      - /mnt/usb/backup:/app/backup_dest
+      - ${BACKUP_SOURCE}:/app/backup_test:ro
+      - ${BACKUP_DEST}:/app/backup_dest
       - /etc/localtime:/etc/localtime:ro
+      - ${APP_DB_PATH}:/app/db
     environment:
-      - TZ=Europe/Paris  # Adjust the timezone as necessary
+      - TZ=Europe/Paris
+      - SERVER_IP=${BACKEND_IP}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: homelab-backups-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SERVER_IP=${BACKEND_IP}
+    depends_on:
+      - backend
     restart: unless-stopped
