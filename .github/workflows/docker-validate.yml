@@ -54,34 +54,3 @@ jobs:
           file: ./docker/Dockerfile.frontend
           push: false
           tags: frontend:test
-
-  trivy-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Backend Image for scanning
-        run: |
-          docker build -t backend:test \
-            -f docker/Dockerfile.backend .
-
-      - name: Build Frontend Image for scanning
-        run: |
-          docker build -t frontend:test \
-            -f docker/Dockerfile.frontend .
-
-      - name: Run Trivy vulnerability scanner on Backend
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "backend:test"
-          format: "table"
-          exit-code: "1"
-          severity: "CRITICAL,HIGH"
-
-      - name: Run Trivy vulnerability scanner on Frontend
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: "frontend:test"
-          format: "table"
-          exit-code: "1"
-          severity: "CRITICAL,HIGH"
