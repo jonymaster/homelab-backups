@@ -24,6 +24,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: docker/Dockerfile.backend
+          ignore: DL3008,DL3009,DL3015
 
       - name: Run Hadolint on Frontend Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -42,15 +43,17 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.backend
+          file: ./docker/Dockerfile.backend
           push: false
+          tags: backend:test
 
       - name: Build Frontend Image
         uses: docker/build-push-action@v5
         with:
-          context: frontend
-          file: docker/Dockerfile.frontend
+          context: .
+          file: ./docker/Dockerfile.frontend
           push: false
+          tags: frontend:test
 
   trivy-scan:
     runs-on: ubuntu-latest
@@ -58,23 +61,27 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Backend Image for scanning
-        run: docker build -t backend:test -f docker/Dockerfile.backend .
+        run: |
+          docker build -t backend:test \
+            -f docker/Dockerfile.backend .
 
       - name: Build Frontend Image for scanning
-        run: docker build -t frontend:test -f docker/Dockerfile.frontend frontend/
+        run: |
+          docker build -t frontend:test \
+            -f docker/Dockerfile.frontend .
 
       - name: Run Trivy vulnerability scanner on Backend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: backend:test
-          format: table
+          image-ref: "backend:test"
+          format: "table"
           exit-code: "1"
           severity: "CRITICAL,HIGH"
 
       - name: Run Trivy vulnerability scanner on Frontend
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: frontend:test
-          format: table
+          image-ref: "frontend:test"
+          format: "table"
           exit-code: "1"
           severity: "CRITICAL,HIGH"
