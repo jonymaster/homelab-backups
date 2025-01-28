@@ -7,23 +7,24 @@ services:
     ports:
       - "8686:8686"
     volumes:
-      - /home/jony/backup_test:/app/backup_test:ro
-      - /mnt/usb/backup:/app/backup_dest
+      - ${BACKUP_SOURCE}:/app/backup_test:ro
+      - ${BACKUP_DEST}:/app/backup_dest
       - /etc/localtime:/etc/localtime:ro
-      - /home/jony/projects/homelab-backups/app/db:/app/db
+      - ${APP_DB_PATH}:/app/db
     environment:
       - TZ=Europe/Paris
+      - SERVER_IP=${BACKEND_IP}
     restart: unless-stopped
 
   frontend:
-    build: 
+    build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
     container_name: homelab-backups-frontend
     ports:
       - "3000:3000"
     environment:
-      - 10.21.1.50=backend
+      - NEXT_PUBLIC_SERVER_IP=${BACKEND_IP}
     depends_on:
       - backend
     restart: unless-stopped
