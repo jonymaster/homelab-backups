@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { BackupJob } from "@/types";
+import DirectorySuggestions from "./DirectorySuggestions";
 
 interface JobFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (job: Partial<BackupJob>) => Promise<void>;
+  onSubmit: (formData: Partial<BackupJob>) => Promise<void>;
 }
 
 export default function JobForm({ isOpen, onClose, onSubmit }: JobFormProps) {
   const [formData, setFormData] = useState({
     name: "",
-    source: "",
-    destination: "",
+    source: "/app/source",
+    destination: "/app/destination",
     schedule: "",
   });
 
@@ -19,7 +20,12 @@ export default function JobForm({ isOpen, onClose, onSubmit }: JobFormProps) {
     e.preventDefault();
     await onSubmit(formData);
     onClose();
-    setFormData({ name: "", source: "", destination: "", schedule: "" });
+    setFormData({
+      name: "",
+      source: "/app/source",
+      destination: "/app/destination",
+      schedule: "",
+    });
   };
 
   if (!isOpen) return null;
@@ -57,6 +63,10 @@ export default function JobForm({ isOpen, onClose, onSubmit }: JobFormProps) {
               }
               className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-gray-100"
               required
+            />
+            <DirectorySuggestions
+              path={formData.source}
+              onSelect={(path) => setFormData({ ...formData, source: path })}
             />
           </div>
           <div>

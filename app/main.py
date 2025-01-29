@@ -7,6 +7,7 @@ from utils.scheduler_service import schedule_all_jobs
 from db.session import engine, database, Base
 from routes.backup_job import router as backup_job_router
 from routes.backup_result import router as backup_result_router
+from routes.filesystem import router as filesystem_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(backup_job_router)
 app.include_router(backup_result_router)
+app.include_router(filesystem_router)
 
 @app.get("/")
 async def root():

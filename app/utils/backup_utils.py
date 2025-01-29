@@ -24,7 +24,7 @@ def execute_backup(job_id):
 
         status = "success"
         message = f"Backup successful"
-        details = result.stderr
+        details = result.stdout
     except subprocess.CalledProcessError as e:
         status = "failed"
         message = f"Backup failed"
