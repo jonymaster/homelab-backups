@@ -23,13 +23,15 @@ def execute_backup(job_id):
         result = subprocess.run(command, check=True, capture_output=True, text=True)
 
         status = "success"
-        message = f"Backup successful: {result.stdout}"
+        message = f"Backup successful"
+        details = result.stderr
     except subprocess.CalledProcessError as e:
         status = "failed"
-        message = f"Backup failed: {e.stderr}"
+        message = f"Backup failed"
+        details = e.stderr
 
     job.status = "completed" if status == "success" else "failed"
-    job_result = BackupResult(job_id=job_id, timestamp=datetime.now().isoformat(), status=status, result=message)
+    job_result = BackupResult(job_id=job_id, timestamp=datetime.now().isoformat(), status=status, result=message, details=details)
     db.add(job_result)
     db.commit()
 

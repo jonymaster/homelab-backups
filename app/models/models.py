@@ -22,5 +22,6 @@ class BackupResult(Base):
     timestamp = Column(String, index=True)
     status = Column(String, index=True)
     result = Column(String, index=True)
+    details = Column(String, index=True)
 
     backup_job = relationship('BackupJob', back_populates='results')
