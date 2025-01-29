@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { BackupJob, BackupResult } from "../types";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
+import { EllipsisVerticalIcon, PlusIcon } from "@heroicons/react/24/outline";
+import CreateJobForm from "../components/CreateJobForm";
+import EditJobForm from "../components/EditJobForm";
 
 export default function Home() {
   const [jobs, setJobs] = useState<BackupJob[]>([]);
@@ -10,6 +12,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [isJobFormOpen, setIsJobFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<BackupJob | null>(null);
 
   const fetchData = async () => {
     try {
@@ -24,20 +29,17 @@ export default function Home() {
 
       const jobsData = await jobsResponse.json();
       const resultsData = await resultsResponse.json();
-
       setJobs(jobsData);
       setResults(resultsData);
+      setIsLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
   }, []);
 
   const executeBackup = async (jobId: number) => {
@@ -58,6 +60,52 @@ export default function Home() {
     }
   };
 
+  const createJob = async (jobData: Partial<BackupJob>) => {
+    try {
+      const response = await fetch(
+        `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(jobData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to create job");
+      }
+
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create job");
+    }
+  };
+
+  const updateJob = async (jobId: number, jobData: Partial<BackupJob>) => {
+    try {
+      const response = await fetch(
+        `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(jobData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update job");
+      }
+
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update job");
+    }
+  };
+
   const handleActionClick = (
     jobId: number,
     action: "edit" | "run" | "delete"
@@ -71,7 +119,11 @@ export default function Home() {
         // TODO: Implement delete
         break;
       case "edit":
-        // TODO: Implement edit
+        const jobToEdit = jobs.find((job) => job.id === jobId);
+        if (jobToEdit) {
+          setSelectedJob(jobToEdit);
+          setIsEditFormOpen(true);
+        }
         break;
     }
   };
@@ -103,7 +155,15 @@ export default function Home() {
   return (
     <div className="min-h-screen p-8 bg-gray-900 text-gray-100">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Backup Jobs</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Backup Jobs</h1>
+          <button
+            onClick={() => setIsJobFormOpen(true)}
+            className="p-2 bg-blue-600 rounded-full hover:bg-blue-700"
+          >
+            <PlusIcon className="h-6 w-6" />
+          </button>
+        </div>
 
         {error && (
           <div className="mb-4 p-4 bg-red-900/50 text-red-200 rounded-lg border border-red-700">
@@ -203,6 +263,24 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      <CreateJobForm
+        isOpen={isJobFormOpen}
+        onClose={() => setIsJobFormOpen(false)}
+        onSubmit={createJob}
+      />
+
+      {selectedJob && (
+        <EditJobForm
+          job={selectedJob}
+          isOpen={isEditFormOpen}
+          onClose={() => {
+            setIsEditFormOpen(false);
+            setSelectedJob(null);
+          }}
+          onSubmit={updateJob}
+        />
+      )}
     </div>
   );
 }
