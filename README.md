@@ -26,15 +26,17 @@ At the moment the app works for local backups, a next development should enable 
     APP_DB_PATH=/path/to/app/db
     BACKEND_IP=localhost
     ```
+    As a security best practice, avoid to map ```"/"``` as ```BACKUP_SOURCE```.
+    ```BACKUP_DEST``` should be something external such as ```/mnt/media/backups```
 
-3. Deploy:
+4. Deploy:
 
     ```bash
     cd docker
     docker compose up -d
     ```
 
-4. Access dashboard at ```http://localhost:3000```
+5. Access dashboard at ```http://localhost:3000```
 
     License
     MIT License - See LICENSE file
