@@ -64,3 +64,12 @@ export const updateJob = async (jobId: number, jobData: Partial<BackupJob>): Pro
     throw new Error("Failed to update job");
   }
 };
+
+export const listDirectory = async (path: string): Promise<string[]> => {
+  const response = await fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/list-directory?path=${encodeURIComponent(path)}`);
+  if (!response.ok) {
+    throw new Error("Failed to list directory");
+  }
+  const data = await response.json();
+  return data.directories;
+};
