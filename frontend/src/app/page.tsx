@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BackupJob, BackupResult } from "../types";
 import { EllipsisVerticalIcon, PlusIcon } from "@heroicons/react/24/outline";
 import CreateJobForm from "../components/CreateJobForm";
 import EditJobForm from "../components/EditJobForm";
+import JobResultsModal from "@/components/JobResultsModal";
 import {
   fetchData,
   executeBackup,
   updateJob,
   createJob,
   deleteJob,
+  getResultsForJob,
 } from "./api";
 
 export default function Home() {
@@ -22,6 +24,12 @@ export default function Home() {
   const [isJobFormOpen, setIsJobFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<BackupJob | null>(null);
+  const [isJobResultsModalOpen, setIsJobResultsModalOpen] = useState(false);
+  const [selectedJobResults, setSelectedJobResults] = useState<BackupResult[]>(
+    []
+  );
+  const [selectedJobName, setSelectedJobName] = useState<string>("");
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,6 +49,19 @@ export default function Home() {
     };
 
     loadData();
+  }, []);
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setActiveDropdown(null);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleExecuteBackup = async (jobId: number) => {
@@ -138,6 +159,17 @@ export default function Home() {
     });
   };
 
+  const handleJobTitleClick = async (jobName: string, jobId: number) => {
+    try {
+      const results = await getResultsForJob(jobId); // Await the promise
+      setSelectedJobResults(results); // Set the state with the resolved value
+      setSelectedJobName(jobName);
+      setIsJobResultsModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch results for job:", error);
+    }
+  };
+
   if (isLoading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -175,7 +207,10 @@ export default function Home() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-2">
-                    <h2 className="text-lg font-semibold text-gray-100">
+                    <h2
+                      className="text-lg font-semibold text-gray-100 cursor-pointer"
+                      onClick={() => handleJobTitleClick(job.name, job.id)}
+                    >
                       {job.name}
                     </h2>
                     {latestResult && (
@@ -183,6 +218,8 @@ export default function Home() {
                         className={`text-sm px-2 py-1 rounded-full ${
                           latestResult.status === "success"
                             ? "bg-green-900/50 text-green-400"
+                            : latestResult.status === "running"
+                            ? "bg-orange-900/50 text-orange-400"
                             : "bg-red-900/50 text-red-400"
                         }`}
                       >
@@ -227,22 +264,34 @@ export default function Home() {
                   </button>
 
                   {activeDropdown === job.id && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 z-10">
+                    <div
+                      ref={menuRef}
+                      className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 z-10"
+                    >
                       <div className="py-1">
                         <button
-                          onClick={() => handleActionClick(job.id, "run")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(job.id, "run");
+                          }}
                           className="w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 text-left"
                         >
                           Run Now
                         </button>
                         <button
-                          onClick={() => handleActionClick(job.id, "edit")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(job.id, "edit");
+                          }}
                           className="w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 text-left"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => handleActionClick(job.id, "delete")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(job.id, "delete");
+                          }}
                           className="w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-700 text-left"
                         >
                           Delete
@@ -274,6 +323,13 @@ export default function Home() {
           onSubmit={handleUpdateJob}
         />
       )}
+
+      <JobResultsModal
+        isOpen={isJobResultsModalOpen}
+        onClose={() => setIsJobResultsModalOpen(false)}
+        jobName={selectedJobName}
+        results={selectedJobResults}
+      />
     </div>
   );
 }
