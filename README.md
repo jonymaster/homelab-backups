@@ -12,29 +12,29 @@ At the moment the app works for local backups, a next development should enable 
 
 1. Clone and setup:
 
-```bash
-git clone https://github.com/yourusername/homelab-backups.git
-cd homelab-backups
-cp docker/.env.example docker/.env
-```
+    ```bash
+    git clone https://github.com/yourusername/homelab-backups.git
+    cd homelab-backups
+    cp docker/.env.example docker/.env
+    ```
 
 2. Configure environment:
 
-```bash
-BACKUP_SOURCE=/path/to/backup/source
-BACKUP_DEST=/path/to/backup/destination
-APP_DB_PATH=/path/to/app/db
-BACKEND_IP=localhost
-```
+    ```bash
+    BACKUP_SOURCE=/path/to/backup/source
+    BACKUP_DEST=/path/to/backup/destination
+    APP_DB_PATH=/path/to/app/db
+    BACKEND_IP=localhost
+    ```
 
 3. Deploy:
 
-```bash
-cd docker
-docker compose up -d
-```
+    ```bash
+    cd docker
+    docker compose up -d
+    ```
 
 4. Access dashboard at ```http://localhost:3000```
 
-License
-MIT License - See LICENSE file
+    License
+    MIT License - See LICENSE file
