@@ -12,7 +12,7 @@ class BackupJobRead(BackupJobBase):
     status: str
 
     class Config:
-        from_attributes = True  # Use Configuration Class for Pydantic V2
+        from_attributes = True
 
 class BackupResultBase(BaseModel):
     timestamp: str
@@ -24,4 +24,4 @@ class BackupResultRead(BackupResultBase):
     id: int
 
     class Config:
-        from_attributes = True  # Ensure ORM mode functionality
+        from_attributes = True
