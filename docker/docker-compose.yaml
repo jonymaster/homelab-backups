@@ -7,8 +7,8 @@ services:
     ports:
       - "8686:8686"
     volumes:
-      - ${BACKUP_SOURCE}:/app/backup_source:ro
-      - ${BACKUP_DESTINATION}:/app/backup_destination
+      - ${BACKUP_SOURCE}:/app/source:ro
+      - ${BACKUP_DESTINATION}:/app/destination
       - /etc/localtime:/etc/localtime:ro
       - ${APP_DB_PATH}:/app/db
     environment:

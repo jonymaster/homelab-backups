@@ -5,6 +5,7 @@ import { BackupJob, BackupResult } from "../types";
 import { EllipsisVerticalIcon, PlusIcon } from "@heroicons/react/24/outline";
 import CreateJobForm from "../components/CreateJobForm";
 import EditJobForm from "../components/EditJobForm";
+import { fetchData, executeBackup, updateJob, createJob } from "./api";
 
 export default function Home() {
   const [jobs, setJobs] = useState<BackupJob[]>([]);
@@ -16,93 +17,65 @@ export default function Home() {
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<BackupJob | null>(null);
 
-  const fetchData = async () => {
-    try {
-      const [jobsResponse, resultsResponse] = await Promise.all([
-        fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/`),
-        fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/results/`),
-      ]);
-
-      if (!jobsResponse.ok || !resultsResponse.ok) {
-        throw new Error("Failed to fetch data");
-      }
-
-      const jobsData = await jobsResponse.json();
-      const resultsData = await resultsResponse.json();
-      setJobs(jobsData);
-      setResults(resultsData);
-      setIsLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchData();
+    const loadData = async () => {
+      try {
+        const [jobs, results] = await fetchData();
+        setJobs(jobs);
+        setResults(results);
+        setIsLoading(false);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
-  const executeBackup = async (jobId: number) => {
+  const handleExecuteBackup = async (jobId: number) => {
     setError(null);
     try {
-      const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}/execute`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
+      await executeBackup(jobId);
+      const [jobs, results] = await fetchData();
+      setJobs(jobs);
+      setResults(results);
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error ? error.message : "Failed to execute backup"
       );
-
-      if (!response.ok) throw new Error("Failed to execute backup");
-      await fetchData(); // Refresh data after execution
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
-  const createJob = async (jobData: Partial<BackupJob>) => {
+  const handleUpdateJob = async (
+    jobId: number,
+    jobData: Partial<BackupJob>
+  ) => {
+    setError(null);
     try {
-      const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(jobData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to create job");
-      }
-
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create job");
+      await updateJob(jobId, jobData);
+      const [jobs, results] = await fetchData();
+      setJobs(jobs);
+      setResults(results);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to update job");
     }
   };
 
-  const updateJob = async (jobId: number, jobData: Partial<BackupJob>) => {
+  const handleCreateJob = async (jobData: Partial<BackupJob>) => {
+    setError(null);
     try {
-      const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(jobData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update job");
-      }
-
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update job");
+      await createJob(jobData);
+      const [jobs, results] = await fetchData();
+      setJobs(jobs);
+      setResults(results);
+      setIsJobFormOpen(false);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to create job");
     }
   };
 
@@ -113,7 +86,7 @@ export default function Home() {
     setActiveDropdown(null);
     switch (action) {
       case "run":
-        executeBackup(jobId);
+        handleExecuteBackup(jobId);
         break;
       case "delete":
         // TODO: Implement delete
@@ -267,7 +240,7 @@ export default function Home() {
       <CreateJobForm
         isOpen={isJobFormOpen}
         onClose={() => setIsJobFormOpen(false)}
-        onSubmit={createJob}
+        onSubmit={handleCreateJob}
       />
 
       {selectedJob && (
@@ -278,7 +251,7 @@ export default function Home() {
             setIsEditFormOpen(false);
             setSelectedJob(null);
           }}
-          onSubmit={updateJob}
+          onSubmit={handleUpdateJob}
         />
       )}
     </div>
