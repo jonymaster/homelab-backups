@@ -1,6 +1,6 @@
 # Homelab Backups
 
-A webapp built with Next.js that uses FastAPI as a backend to schedule, edit and manage rdiff jobs for your homelab server
+A webapp built with Next.js and FastAPI as a backend for scheduling, editing and managing rdiff jobs for your homelab server.
 
 ## Notes
 
