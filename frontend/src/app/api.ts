@@ -65,6 +65,17 @@ export const updateJob = async (jobId: number, jobData: Partial<BackupJob>): Pro
   }
 };
 
+export const deleteJob = async (jobId: number): Promise<void> => {
+  const response = await fetch(
+    `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}`,
+    { method: "DELETE" }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to delete backup");
+  }
+};
+
 export const listDirectory = async (path: string): Promise<string[]> => {
   const response = await fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/list-directory?path=${encodeURIComponent(path)}`);
   if (!response.ok) {

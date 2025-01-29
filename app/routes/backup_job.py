@@ -7,6 +7,7 @@ from models.models import BackupJob, BackupResult
 from models.schemas import BackupJobBase, BackupJobRead
 from utils.scheduler_service import add_job, remove_job
 from utils.backup_utils import execute_backup
+from routes.backup_result import delete_results_for_job
 
 router = APIRouter()
 
@@ -81,6 +82,7 @@ def delete_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
+    delete_results_for_job(job_id, db)
     db.delete(job)
     db.commit()
 

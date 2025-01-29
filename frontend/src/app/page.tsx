@@ -5,7 +5,13 @@ import { BackupJob, BackupResult } from "../types";
 import { EllipsisVerticalIcon, PlusIcon } from "@heroicons/react/24/outline";
 import CreateJobForm from "../components/CreateJobForm";
 import EditJobForm from "../components/EditJobForm";
-import { fetchData, executeBackup, updateJob, createJob } from "./api";
+import {
+  fetchData,
+  executeBackup,
+  updateJob,
+  createJob,
+  deleteJob,
+} from "./api";
 
 export default function Home() {
   const [jobs, setJobs] = useState<BackupJob[]>([]);
@@ -51,6 +57,20 @@ export default function Home() {
     }
   };
 
+  const handleDeleteBackup = async (jobId: number) => {
+    setError(null);
+    try {
+      await deleteJob(jobId);
+      const [jobs, results] = await fetchData();
+      setJobs(jobs);
+      setResults(results);
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error ? error.message : "Failed to delete backup"
+      );
+    }
+  };
+
   const handleUpdateJob = async (
     jobId: number,
     jobData: Partial<BackupJob>
@@ -89,7 +109,7 @@ export default function Home() {
         handleExecuteBackup(jobId);
         break;
       case "delete":
-        // TODO: Implement delete
+        handleDeleteBackup(jobId);
         break;
       case "edit":
         const jobToEdit = jobs.find((job) => job.id === jobId);

@@ -27,3 +27,14 @@ def get_results_for_job(job_id: int, db: Session = Depends(get_db)):
     if not results:
         raise HTTPException(status_code=404, detail="No results found for this job")
     return results
+
+@router.delete("jobs/{job_id}/results", response_model=str)
+@router.delete("/jobs/{job_id}/results/", response_model=str)
+def delete_results_for_job(job_id: int, db: Session = Depends(get_db)):
+    results = db.query(BackupResult).filter(BackupResult.job_id == job_id).all()
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found for this job")
+    for result in results:
+        db.delete(result)
+    db.commit()
+    return "Results deleted"
