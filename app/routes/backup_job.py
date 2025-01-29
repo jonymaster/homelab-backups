@@ -10,6 +10,7 @@ from utils.backup_utils import execute_backup
 
 router = APIRouter()
 
+@router.post("/jobs", response_model=BackupJobRead)
 @router.post("/jobs/", response_model=BackupJobRead)
 def create_backup_job(job: BackupJobBase, db: Session = Depends(get_db)):
     db_job = BackupJob(**job.model_dump())
@@ -23,6 +24,7 @@ def create_backup_job(job: BackupJobBase, db: Session = Depends(get_db)):
     return db_job
 
 @router.put("/jobs/{job_id}", response_model=BackupJobRead)
+@router.put("/jobs/{job_id}/", response_model=BackupJobRead)
 def update_backup_job(job_id: int, updated_job: BackupJobBase, db: Session = Depends(get_db)):
     db_job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if not db_job:
@@ -42,12 +44,14 @@ def update_backup_job(job_id: int, updated_job: BackupJobBase, db: Session = Dep
 
     return db_job
 
+@router.get("/jobs", response_model=List[BackupJobRead])
 @router.get("/jobs/", response_model=List[BackupJobRead])
 def get_all_backup_jobs(db: Session = Depends(get_db)):
     jobs = db.query(BackupJob).all()
     return jobs
 
 @router.get("/jobs/{job_id}", response_model=BackupJobRead)
+@router.get("/jobs/{job_id}/", response_model=BackupJobRead)
 def get_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
@@ -56,6 +60,7 @@ def get_backup_job(job_id: int, db: Session = Depends(get_db)):
     return job_info
 
 @router.post("/jobs/{job_id}/execute", response_model=dict)
+@router.post("/jobs/{job_id}/execute/", response_model=dict)
 def execute_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
@@ -66,12 +71,12 @@ def execute_backup_job(job_id: int, db: Session = Depends(get_db)):
     timestamp = datetime.now().isoformat()
 
     job_result = BackupResult(job_id=job.id, timestamp=timestamp, status=status, result=message)
-    #db.add(job_result)
     db.commit()
 
     return {"message": message}
 
 @router.delete("/jobs/{job_id}", response_model=dict)
+@router.delete("/jobs/{job_id}/", response_model=dict)
 def delete_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
