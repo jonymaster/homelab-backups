@@ -2,13 +2,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import Session
 from db.session import get_db
 from models.models import BackupJob
-from utils.backup_utils import execute_backup  # Import the execute_backup function
+from utils.backup_utils import execute_backup
 
 scheduler = BackgroundScheduler()
 scheduler.start()
 
 def add_job(job_id, cron_args):
-    # Use job_id as execute_backup retrieves job details from DB
     scheduler.add_job(execute_backup, 'cron', args=[job_id],
                       id=f"backup-{job_id}", replace_existing=True, **cron_args)
 
