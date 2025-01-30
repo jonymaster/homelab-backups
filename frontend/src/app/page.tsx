@@ -213,17 +213,19 @@ export default function Home() {
                     >
                       {job.name}
                     </h2>
-                    {latestResult && (
+                    {job.status && (
                       <span
                         className={`text-sm px-2 py-1 rounded-full ${
-                          latestResult.status === "success"
+                          job.status === "completed"
                             ? "bg-green-900/50 text-green-400"
-                            : latestResult.status === "running"
+                            : job.status === "running"
                             ? "bg-orange-900/50 text-orange-400"
+                            : job.status === "pending"
+                            ? "bg-blue-900/50 text-blue-400"
                             : "bg-red-900/50 text-red-400"
                         }`}
                       >
-                        {latestResult.status}
+                        {job.status}
                       </span>
                     )}
                   </div>
