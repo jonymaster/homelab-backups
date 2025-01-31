@@ -51,6 +51,26 @@ export default function Home() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (jobs.some((job) => job.status === "running")) {
+        try {
+          const [jobs, results] = await fetchData();
+          setJobs(jobs);
+          setResults(results);
+        } catch (error: unknown) {
+          if (error instanceof Error) {
+            setError(error.message);
+          } else {
+            setError("An unknown error occurred");
+          }
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [jobs]);
+
   const handleClickOutside = (event: MouseEvent) => {
     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
       setActiveDropdown(null);

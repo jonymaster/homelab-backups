@@ -5,7 +5,7 @@ from db.session import get_db
 from models.models import BackupJob, BackupResult
 from datetime import datetime
 
-def execute_backup(job_id):
+def execute_backup(job_id: int):
     db: Session = next(get_db())
     job = db.query(BackupJob).filter_by(id=job_id).first()
     if not job:

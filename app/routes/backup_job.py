@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List
@@ -62,19 +62,14 @@ def get_backup_job(job_id: int, db: Session = Depends(get_db)):
 
 @router.post("/jobs/{job_id}/execute", response_model=dict)
 @router.post("/jobs/{job_id}/execute/", response_model=dict)
-def execute_backup_job(job_id: int, db: Session = Depends(get_db)):
+def execute_backup_job(job_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    status, message = execute_backup(job.id)
+    background_tasks.add_task(execute_backup, job.id)
 
-    timestamp = datetime.now().isoformat()
-
-    job_result = BackupResult(job_id=job.id, timestamp=timestamp, status=status, result=message)
-    db.commit()
-
-    return {"message": message}
+    return {"message": "Backup job execution started"}
 
 @router.delete("/jobs/{job_id}", response_model=dict)
 @router.delete("/jobs/{job_id}/", response_model=dict)
