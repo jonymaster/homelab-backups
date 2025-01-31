@@ -201,7 +201,7 @@ export default function Home() {
     <div className="min-h-screen p-8 bg-gray-900 text-gray-100">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Backup Jobs</h1>
+          <h1 className="text-3xl font-bold">Homelab Backups</h1>
           <button
             onClick={() => setIsJobFormOpen(true)}
             className="p-2 bg-blue-600 rounded-full hover:bg-blue-700"
