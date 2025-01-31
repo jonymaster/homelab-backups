@@ -84,3 +84,11 @@ export const listDirectory = async (path: string): Promise<string[]> => {
   const data = await response.json();
   return data.directories;
 };
+
+export const getResultsForJob = async (jobId: number): Promise<BackupResult[]> => {
+  const response = await fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}/results/`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch results for job");
+  }
+  return response.json();
+};

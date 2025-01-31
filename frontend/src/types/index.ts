@@ -14,5 +14,6 @@ export interface BackupResult {
     timestamp: string;
     status: string;
     result: string;
+    details: string;
     backup_job?: BackupJob;
 }

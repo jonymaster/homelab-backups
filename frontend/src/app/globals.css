@@ -19,3 +19,11 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.relative .group-hover\:block {
+  display: none;
+}
+
+.relative:hover .group-hover\:block {
+  display: block;
+}
