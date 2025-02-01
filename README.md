@@ -13,7 +13,7 @@ At the moment the app works for local backups, a next development should enable 
 1. Clone and setup:
 
     ```bash
-    git clone https://github.com/yourusername/homelab-backups.git
+    git clone https://github.com/jonymaster/homelab-backups.git
     cd homelab-backups
     cp docker/.env.example docker/.env
     ```
