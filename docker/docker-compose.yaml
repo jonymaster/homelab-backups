@@ -9,8 +9,8 @@ services:
     volumes:
       - ${BACKUP_SOURCE}:/app/source:ro
       - ${BACKUP_DESTINATION}:/app/destination
-      - /etc/localtime:/etc/localtime:ro
       - ${APP_DB_PATH}:/app/db
+      - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=Europe/Paris
       - SERVER_IP=${BACKEND_IP}
