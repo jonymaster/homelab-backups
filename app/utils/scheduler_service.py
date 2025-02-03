@@ -1,8 +1,8 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy.orm import Session
-from db.session import get_db
+from app.db.session import get_db
 from models.models import BackupJob
-from backup_utils import execute_backup
+from utils.backup_utils import execute_backup
 
 scheduler = BackgroundScheduler()
 scheduler.start()
