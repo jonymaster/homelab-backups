@@ -12,7 +12,6 @@ At the moment the app works for local backups, a next development should enable 
 
 You can use the following docker compose since the images are public. Refer to the step below for the .env example file
 
-    ```
     services:
     backend:
         image: jonymaster/homelab-backups-backend:latest
@@ -38,7 +37,6 @@ You can use the following docker compose since the images are public. Refer to t
         depends_on:
         - backend
         restart: unless-stopped
-    ```
 
 Altenatevly, you can download the project and build it.
 
