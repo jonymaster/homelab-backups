@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.backend
-    container_name: homelab-backups-api
+    container_name: homelab-backups-backend
     ports:
       - "8686:8686"
     volumes:

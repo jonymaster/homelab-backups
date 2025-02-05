@@ -13,7 +13,6 @@ WORKDIR /app
 
 COPY ../app/requirements.txt .
 COPY ../app ./
-COPY ../app/main.py ./
 
 RUN pip install --no-cache-dir -r requirements.txt
 
