@@ -14,31 +14,30 @@ You can use the following docker compose since the images are public. Refer to t
 
     ```yaml
     services:
-  backend:
-    image: jonymaster/homelab-backups-backend:latest
-    container_name: homelab-backups-api
-    ports:
-      - "8686:8686"
-    volumes:
-      - ${BACKUP_SOURCE}:/app/source:ro
-      - ${BACKUP_DESTINATION}:/app/destination
-      - ${APP_DB_PATH}:/app/data
-      - /etc/localtime:/etc/localtime:ro
-    environment:
-      - TZ=Europe/Paris
-      - SERVER_IP=${BACKEND_IP}
-    restart: unless-stopped
-
-  frontend:
-    image: jonymaster/homelab-backups-frontend:latest
-    container_name: homelab-backups-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_SERVER_IP=${BACKEND_IP}
-    depends_on:
-      - backend
-    restart: unless-stopped
+    backend:
+        image: jonymaster/homelab-backups-backend:latest
+        container_name: homelab-backups-api
+        ports:
+        - "8686:8686"
+        volumes:
+        - ${BACKUP_SOURCE}:/app/source:ro
+        - ${BACKUP_DESTINATION}:/app/destination
+        - ${APP_DB_PATH}:/app/data
+        - /etc/localtime:/etc/localtime:ro
+        environment:
+        - TZ=Europe/Paris
+        - SERVER_IP=${BACKEND_IP}
+        restart: unless-stopped
+    frontend:
+        image: jonymaster/homelab-backups-frontend:latest
+        container_name: homelab-backups-frontend
+        ports:
+        - "3000:3000"
+        environment:
+        - NEXT_PUBLIC_SERVER_IP=${BACKEND_IP}
+        depends_on:
+        - backend
+        restart: unless-stopped
     ```
 
 Altenatevly, you can download the project and build it.
