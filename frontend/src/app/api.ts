@@ -2,8 +2,8 @@ import { BackupJob, BackupResult } from "../types";
 
 export const fetchData = async (): Promise<[BackupJob[], BackupResult[]]> => {
   const [jobsResponse, resultsResponse] = await Promise.all([
-    fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/`),
-    fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/results/`),
+    fetch(`/api/jobs/`),
+    fetch(`/api/results/`),
   ]);
 
   if (!jobsResponse.ok || !resultsResponse.ok) {
@@ -22,7 +22,7 @@ export const createJob = async (jobData: Partial<BackupJob>): Promise<void> => {
   }
 
   const response = await fetch(
-    `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/`,
+    `/api/jobs/`,
     {
       method: "POST",
       headers: {
@@ -39,7 +39,7 @@ export const createJob = async (jobData: Partial<BackupJob>): Promise<void> => {
 
 export const executeBackup = async (jobId: number): Promise<void> => {
   const response = await fetch(
-    `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}/execute`,
+    `/api/jobs/${jobId}/execute`,
     { method: "POST" }
   );
 
@@ -50,7 +50,7 @@ export const executeBackup = async (jobId: number): Promise<void> => {
 
 export const updateJob = async (jobId: number, jobData: Partial<BackupJob>): Promise<void> => {
   const response = await fetch(
-    `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}`,
+    `/api/jobs/${jobId}`,
     {
       method: "PUT",
       headers: {
@@ -67,7 +67,7 @@ export const updateJob = async (jobId: number, jobData: Partial<BackupJob>): Pro
 
 export const deleteJob = async (jobId: number): Promise<void> => {
   const response = await fetch(
-    `http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}`,
+    `/api/jobs/${jobId}`,
     { method: "DELETE" }
   );
 
@@ -77,7 +77,7 @@ export const deleteJob = async (jobId: number): Promise<void> => {
 };
 
 export const listDirectory = async (path: string): Promise<string[]> => {
-  const response = await fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/list-directory?path=${encodeURIComponent(path)}`);
+  const response = await fetch(`/api/list-directory?path=${encodeURIComponent(path)}`);
   if (!response.ok) {
     throw new Error("Failed to list directory");
   }
@@ -86,7 +86,7 @@ export const listDirectory = async (path: string): Promise<string[]> => {
 };
 
 export const getResultsForJob = async (jobId: number): Promise<BackupResult[]> => {
-  const response = await fetch(`http://${process.env.NEXT_PUBLIC_SERVER_IP}:8686/jobs/${jobId}/results/`);
+  const response = await fetch(`/api/jobs/${jobId}/results/`);
   if (!response.ok) {
     throw new Error("Failed to fetch results for job");
   }

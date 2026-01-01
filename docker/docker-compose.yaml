@@ -23,8 +23,6 @@ services:
     container_name: homelab-backups-frontend
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_SERVER_IP=${BACKEND_IP}
     depends_on:
       - backend
     restart: unless-stopped
