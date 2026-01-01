@@ -2,11 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install ca-certificates for SSL connections
+RUN apk add --no-cache ca-certificates
+
 COPY ../frontend/package*.json ./
 RUN npm install
 
 COPY ../frontend .
 
+# Build with network access
 RUN npm run build
 
 EXPOSE 3000
