@@ -1,21 +1,24 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 RUN apt-get update && \
-    apt-get install -y tini cron rdiff-backup procps tzdata && \
-    apt-get clean
-
-ENV TZ=Europe/Madrid
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-ENTRYPOINT ["/usr/bin/tini", "--"]
+    apt-get install -y --no-install-recommends tini rdiff-backup tzdata && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd --uid 1000 --create-home app
 
 WORKDIR /app
 
-COPY ../app/requirements.txt .
-COPY ../app ./
-
+COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./
+RUN mkdir -p data source destination && chown -R app:app /app
+
+USER 1000:1000
 
 EXPOSE 8686
 
-CMD ["sh", "-c", "cron && uvicorn main:app --host 0.0.0.0 --port 8686"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8686/health')"]
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8686"]

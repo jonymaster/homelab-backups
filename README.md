@@ -12,33 +12,33 @@ At the moment the app works for local backups, a next development should enable 
 
 You can use the following docker compose since the images are public. Refer to the step below for the .env example file
 
-    services:
-    backend:
-        image: jonymaster/homelab-backups-backend:latest
-        container_name: homelab-backups-api
-        ports:
-        - "8686:8686"
-        volumes:
-        - ${BACKUP_SOURCE}:/app/source:ro
-        - ${BACKUP_DESTINATION}:/app/destination
-        - ${APP_DB_PATH}:/app/data
-        - /etc/localtime:/etc/localtime:ro
-        environment:
-        - TZ=Europe/Paris
-        - SERVER_IP=${BACKEND_IP}
-        restart: unless-stopped
-    frontend:
-        image: jonymaster/homelab-backups-frontend:latest
-        container_name: homelab-backups-frontend
-        ports:
-        - "3000:3000"
-        environment:
-        - NEXT_PUBLIC_SERVER_IP=${BACKEND_IP}
-        depends_on:
-        - backend
-        restart: unless-stopped
+```yaml
+services:
+  backend:
+    image: jonymaster/homelab-backups-backend:latest
+    container_name: homelab-backups-backend
+    # Uncomment to debug the API directly
+    # ports:
+    #   - "8686:8686"
+    volumes:
+      - ${BACKUP_SOURCE}:/app/source:ro
+      - ${BACKUP_DESTINATION}:/app/destination
+      - ${APP_DB_PATH}:/app/data
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+    restart: unless-stopped
+  frontend:
+    image: jonymaster/homelab-backups-frontend:latest
+    container_name: homelab-backups-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+```
 
-Altenatevly, you can download the project and build it.
+Alternatively, you can download the project and build it.
 
 ## Quick Start
 
@@ -54,14 +54,14 @@ Altenatevly, you can download the project and build it.
 
     ```bash
     BACKUP_SOURCE=/path/to/backup/source
-    BACKUP_DEST=/path/to/backup/destination
+    BACKUP_DESTINATION=/path/to/backup/destination
     APP_DB_PATH=/path/to/app/db
-    BACKEND_IP=localhost
+    TZ=Etc/UTC
     ```
 
     As a security best practice, avoid to map ```"/"``` as ```BACKUP_SOURCE```.
 
-    ```BACKUP_DEST``` should be something external such as ```/mnt/media/backups```
+    ```BACKUP_DESTINATION``` should be something external such as ```/mnt/media/backups```
 
 3. Deploy:
 
@@ -72,5 +72,15 @@ Altenatevly, you can download the project and build it.
 
 4. Access dashboard at ```http://localhost:3000```
 
-    License
-    MIT License - See LICENSE file
+## Volumes and permissions
+
+The backend runs as a non-root user (UID/GID 1000). ```BACKUP_DESTINATION``` and ```APP_DB_PATH``` must be writable by it:
+
+```bash
+sudo chown -R 1000:1000 /path/to/backup/destination /path/to/app/db
+```
+
+```BACKUP_SOURCE``` is mounted read-only and only needs to be readable.
+
+License
+MIT License - See LICENSE file

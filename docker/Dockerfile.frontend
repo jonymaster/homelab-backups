@@ -1,18 +1,21 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS deps
 WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
 
-# Install ca-certificates for SSL connections
-RUN apk add --no-cache ca-certificates
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY frontend ./
+COPY --from=deps /app/node_modules ./node_modules
+RUN npm run build && npm prune --omit=dev
 
-COPY ../frontend/package*.json ./
-RUN npm install
-
-COPY ../frontend .
-
-# Build with network access
-RUN npm run build
-
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/.next ./.next
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/package.json /app/next.config.ts ./
+USER 1000:1000
 EXPOSE 3000
-
 CMD ["npm", "start"]

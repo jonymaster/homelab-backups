@@ -4,16 +4,15 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.backend
     container_name: homelab-backups-backend
-    ports:
-      - "8686:8686"
+    # Uncomment to debug the API directly
+    # ports:
+    #   - "8686:8686"
     volumes:
       - ${BACKUP_SOURCE}:/app/source:ro
       - ${BACKUP_DESTINATION}:/app/destination
       - ${APP_DB_PATH}:/app/data
-      - /etc/localtime:/etc/localtime:ro
     environment:
-      - TZ=Europe/Paris
-      - SERVER_IP=${BACKEND_IP}
+      - TZ=${TZ:-Etc/UTC}
     restart: unless-stopped
 
   frontend:
@@ -24,5 +23,6 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
