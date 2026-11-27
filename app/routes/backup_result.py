@@ -23,10 +23,7 @@ def get_result(result_id: int, db: Session = Depends(get_db)):
 @router.get("/jobs/{job_id}/results", response_model=List[BackupResultRead])
 @router.get("/jobs/{job_id}/results/", response_model=List[BackupResultRead])
 def get_results_for_job(job_id: int, db: Session = Depends(get_db)):
-    results = db.query(BackupResult).filter(BackupResult.job_id == job_id).all()
-    if not results:
-        raise HTTPException(status_code=404, detail="No results found for this job")
-    return results
+    return db.query(BackupResult).filter(BackupResult.job_id == job_id).all()
 
 @router.delete("/jobs/{job_id}/results", response_model=str)
 @router.delete("/jobs/{job_id}/results/", response_model=str)
