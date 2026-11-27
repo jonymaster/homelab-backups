@@ -1,71 +1,56 @@
-import { useEffect, useRef } from "react";
+"use client";
+
 import { BackupResult } from "@/types";
+import { statusMeta } from "@/utils/status";
+import Modal from "./Modal";
 
 interface JobResultsModalProps {
-  isOpen: boolean;
   onClose: () => void;
   jobName: string;
   results: BackupResult[];
 }
 
 export default function JobResultsModal({
-  isOpen,
   onClose,
   jobName,
   results,
 }: JobResultsModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [onClose]);
-
-  if (!isOpen) return null;
-
-  // Sort results chronologically
-  const sortedResults = [...results].sort(
+  const sorted = [...results].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
   return (
-    <div className="fixed inset-0 bg-gray-900/80 flex items-center justify-center z-50">
-      <div
-        ref={modalRef}
-        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[75vh] overflow-y-auto"
-      >
-        <h2 className="text-xl font-bold mb-4 text-gray-100">
-          {jobName} - Results
-        </h2>
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-200"
-        >
-          &times;
-        </button>
-        <div className="space-y-4">
-          {sortedResults.map((result) => (
-            <div key={result.id} className="p-4 bg-gray-700 rounded-md">
-              <p className="text-sm text-gray-300">Status: {result.status}</p>
-              <p className="text-sm text-gray-300">
-                Timestamp: {new Date(result.timestamp).toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-300">Details: {result.details}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <Modal title={`${jobName} - Results`} onClose={onClose}>
+      {sorted.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">
+          No runs yet. Results appear here after the first backup.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {sorted.map((result) => {
+            const meta = statusMeta(result.status);
+            return (
+              <li key={result.id} className="rounded-md bg-gray-700 p-4">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${meta.className}`}
+                  >
+                    {meta.label}
+                  </span>
+                  <time className="text-sm text-gray-300">
+                    {new Date(result.timestamp).toLocaleString()}
+                  </time>
+                </div>
+                {result.details && (
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm text-gray-300">
+                    {result.details}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Modal>
   );
 }
