@@ -1,0 +1,22 @@
+NOTE:    Starting backup operation from source path /w/src to destination path
+         /w/dst/repo
+--------------[ Session statistics ]--------------
+StartTime 1795839004.95 (Sat Nov 28 04:10:04 2026)
+EndTime 1795839004.99 (Sat Nov 28 04:10:04 2026)
+ElapsedTime 0.04 (0.04 seconds)
+SourceFiles 3
+SourceFileSize 50007 (48.8 KB)
+MirrorFiles 3
+MirrorFileSize 50006 (48.8 KB)
+NewFiles 1
+NewFileSize 5 (5 bytes)
+DeletedFiles 1
+DeletedFileSize 6 (6 bytes)
+ChangedFiles 2
+ChangedSourceSize 50002 (48.8 KB)
+ChangedMirrorSize 50000 (48.8 KB)
+IncrementFiles 4
+IncrementFileSize 208 (208 bytes)
+TotalDestinationSizeChange 209 (209 bytes)
+Errors 0
+--------------------------------------------------

@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from typing import List
 from db.session import get_db
 from models.models import BackupResult
-from models.schemas import BackupResultBase, BackupResultRead
+from models.schemas import BackupResultRead
 
-router = APIRouter()
+# Superseded by /runs; kept until the frontend no longer uses them.
+router = APIRouter(deprecated=True)
 
 @router.get("/results", response_model=List[BackupResultRead])
 @router.get("/results/", response_model=List[BackupResultRead])

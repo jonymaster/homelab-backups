@@ -31,7 +31,7 @@ def test_success(db):
 
 def test_called_process_error(db):
     job_id = make_job(db)
-    error = subprocess.CalledProcessError(1, "rdiff-backup", stderr="boom")
+    error = subprocess.CalledProcessError(1, "rdiff-backup", output="boom")
     with patch("utils.backup_utils.subprocess.run", side_effect=error):
         assert execute_backup(job_id)[0] == "failed"
     assert job_status(db, job_id) == "failed"

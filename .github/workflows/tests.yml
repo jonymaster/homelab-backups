@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  push:
+    paths:
+      - "app/**"
+      - ".github/workflows/tests.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/tests.yml"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/requirements*.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - run: pytest
