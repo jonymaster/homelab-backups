@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EMPTY, formatExact, formatRelative, formatWhen } from "@/lib/format";
-import { useServerTimeZone } from "@/lib/queries";
+import { useClock, useServerTimeZone } from "@/lib/queries";
 import { useNow } from "@/hooks/use-now";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,7 @@ export default function RelativeTime({
 }: RelativeTimeProps) {
   const now = useNow();
   const timeZone = useServerTimeZone();
+  const clock = useClock();
   if (!value) return <span className={className}>{EMPTY}</span>;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -35,7 +36,7 @@ export default function RelativeTime({
   }
 
   const relative = formatRelative(date, now);
-  const when = formatWhen(date, timeZone, now);
+  const when = formatWhen(date, timeZone, now, clock);
   const text =
     format === "relative" ? relative : format === "when" ? when : `${when} · ${relative}`;
 
@@ -53,7 +54,7 @@ export default function RelativeTime({
           {text}
         </time>
       </TooltipTrigger>
-      <TooltipContent>{formatExact(date, timeZone)}</TooltipContent>
+      <TooltipContent>{formatExact(date, timeZone, clock)}</TooltipContent>
     </Tooltip>
   );
 }

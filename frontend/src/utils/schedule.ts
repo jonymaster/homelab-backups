@@ -1,3 +1,5 @@
+import { formatClockTime, type Clock } from "../lib/format.ts";
+
 export type Frequency = "hourly" | "daily" | "weekly" | "monthly";
 
 export interface Schedule {
@@ -135,8 +137,8 @@ function joinList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
-export function summarize(s: Schedule): string {
-  const time = `${pad(s.hour)}:${pad(s.minute)}`;
+export function summarize(s: Schedule, clock: Clock = "24h"): string {
+  const time = formatClockTime(s.hour, s.minute, clock);
   switch (s.frequency) {
     case "hourly":
       return s.minute === 0
@@ -157,9 +159,9 @@ export function summarize(s: Schedule): string {
 }
 
 /** Summary for any cron string; unrecognised patterns read as "Custom schedule". */
-export function describeCron(cron: string): string {
+export function describeCron(cron: string, clock: Clock = "24h"): string {
   const parsed = parseCron(cron);
-  return parsed ? summarize(parsed) : "Custom schedule";
+  return parsed ? summarize(parsed, clock) : "Custom schedule";
 }
 
 interface WallClock {

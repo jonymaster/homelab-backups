@@ -7,9 +7,29 @@ import { CheckIcon, FolderSearchIcon, LoaderCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api, errorMessage, type Job, type JobInput } from "@/lib/api";
+import {
+  api,
+  errorMessage,
+  type Job,
+  type JobInput,
+  type NotifyMode,
+  type Settings,
+} from "@/lib/api";
 import { formatBytes } from "@/lib/format";
-import { keys, useDashboard, useServerTimeZone } from "@/lib/queries";
+import {
+  NOTIFY_MODES,
+  dailyCronAt,
+  isHttpUrl,
+  notifySummary,
+  parsePatterns,
+  retentionSummary,
+} from "@/lib/job-options";
+import {
+  keys,
+  useClock,
+  useDashboard,
+  useServerTimeZone,
+} from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import {
   DESTINATION_ROOT,
@@ -20,6 +40,7 @@ import {
 } from "@/utils/paths";
 import { describeCron, isCronShaped } from "@/utils/schedule";
 import FolderBrowser from "./FolderBrowser";
+import { ExclusionFields, RetentionSelect } from "./JobOptionFields";
 import ScheduleField from "./ScheduleField";
 
 type StepKey = "what" | "where" | "when" | "options";
@@ -33,11 +54,52 @@ const STEPS: { key: StepKey; label: string }[] = [
 
 const LAST_WORKING_STEP = 2;
 
+/** Used when settings could not be loaded; mirrors the backend defaults. */
+const FALLBACK_DEFAULTS: Settings["defaults"] = {
+  retention_days: 180,
+  exclude_presets: ["caches", "temp", "trash"],
+  exclude_patterns: [],
+  schedule_time: "02:00",
+};
+
 interface Draft {
   name: string;
   source: string;
   destination: string;
   schedule: string;
+  retention_days: number | null;
+  exclude_presets: string[];
+  /** Raw textarea content; parsed on save. */
+  patterns: string;
+  notify: NotifyMode;
+  ping_url: string;
+}
+
+function initialDraft(job: Job | undefined, defaults: Settings["defaults"]): Draft {
+  if (job) {
+    return {
+      name: job.name,
+      source: job.source,
+      destination: job.destination,
+      schedule: job.schedule,
+      retention_days: job.retention_days ?? null,
+      exclude_presets: job.exclude_presets ?? [],
+      patterns: (job.exclude_patterns ?? []).join("\n"),
+      notify: job.notify ?? "default",
+      ping_url: job.ping_url ?? "",
+    };
+  }
+  return {
+    name: "",
+    source: SOURCE_ROOT,
+    destination: DESTINATION_ROOT,
+    schedule: dailyCronAt(defaults.schedule_time) ?? "0 2 * * *",
+    retention_days: defaults.retention_days,
+    exclude_presets: defaults.exclude_presets,
+    patterns: defaults.exclude_patterns.join("\n"),
+    notify: "default",
+    ping_url: "",
+  };
 }
 
 function validate(step: StepKey, d: Draft): string | null {
@@ -63,6 +125,9 @@ function validate(step: StepKey, d: Draft): string | null {
       }
       return null;
     case "options":
+      if (d.ping_url.trim() && !isHttpUrl(d.ping_url.trim())) {
+        return "The ping URL must start with http:// or https://.";
+      }
       return null;
   }
 }
@@ -115,23 +180,22 @@ function DiskSpace({ destination }: { destination: string }) {
 
 export default function JobWizard({
   job,
+  defaults = FALLBACK_DEFAULTS,
   onSaved,
 }: {
   /** Present when editing. */
   job?: Job;
+  /** Starting values for a new job, from settings. */
+  defaults?: Settings["defaults"];
   onSaved: (job: Job) => void;
 }) {
   const ids = useId();
   const isEdit = job !== undefined;
   const client = useQueryClient();
   const timeZone = useServerTimeZone();
+  const clock = useClock();
 
-  const [draft, setDraft] = useState<Draft>({
-    name: job?.name ?? "",
-    source: job?.source ?? SOURCE_ROOT,
-    destination: job?.destination ?? DESTINATION_ROOT,
-    schedule: job?.schedule ?? "0 2 * * *",
-  });
+  const [draft, setDraft] = useState<Draft>(() => initialDraft(job, defaults));
   // Until the user edits the destination, it follows the job name.
   const [destinationTouched, setDestinationTouched] = useState(isEdit);
   const [browsingDestination, setBrowsingDestination] = useState(false);
@@ -183,7 +247,7 @@ export default function JobWizard({
   };
 
   const submit = () => {
-    for (let i = 0; i <= LAST_WORKING_STEP; i++) {
+    for (let i = 0; i < STEPS.length; i++) {
       const problem = validate(STEPS[i].key, draft);
       if (problem) {
         setStep(i);
@@ -196,14 +260,19 @@ export default function JobWizard({
       source: trimSlash(draft.source),
       destination: trimSlash(draft.destination),
       schedule: draft.schedule,
+      retention_days: draft.retention_days,
+      exclude_presets: draft.exclude_presets,
+      exclude_patterns: parsePatterns(draft.patterns),
+      notify: draft.notify,
+      ping_url: draft.ping_url.trim() || null,
     });
   };
 
   const subtitles: Record<StepKey, string> = {
     what: draft.name.trim() || "Name and source",
     where: trimSlash(draft.destination),
-    when: draft.schedule ? describeCron(draft.schedule) : "Pick a schedule",
-    options: "Coming soon",
+    when: draft.schedule ? describeCron(draft.schedule, clock) : "Pick a schedule",
+    options: `${retentionSummary(draft.retention_days)} · ${notifySummary(draft.notify)}`,
   };
 
   const current = STEPS[step].key;
@@ -240,7 +309,7 @@ export default function JobWizard({
                           : "border-muted-foreground/40"
                     )}
                   >
-                    {done && !active && s.key !== "options" ? (
+                    {done && !active ? (
                       <CheckIcon className="size-3.5" aria-hidden />
                     ) : (
                       i + 1
@@ -376,15 +445,73 @@ export default function JobWizard({
           <div className="flex flex-col gap-5">
             <StepHeading
               title="Options"
-              hint="Fine-tuning for how backups are kept."
+              hint={
+                isEdit
+                  ? "How long snapshots are kept, what to skip, and who hears about it."
+                  : "Prefilled from your job defaults in Settings. Change them for this job only."
+              }
             />
-            <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">
-                Retention and exclusions are coming soon.
-              </p>
-              <p className="mt-1">
-                Every run is kept for now, and the whole source folder is backed
-                up.
+            <RetentionSelect
+              value={draft.retention_days}
+              onChange={(retention_days) => patch({ retention_days })}
+            />
+            <ExclusionFields
+              presets={draft.exclude_presets}
+              onPresetsChange={(exclude_presets) => patch({ exclude_presets })}
+              patternsText={draft.patterns}
+              onPatternsTextChange={(patterns) => patch({ patterns })}
+            />
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="mb-1.5 text-[13px] font-medium text-foreground/80">
+                Notifications
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {NOTIFY_MODES.map((mode) => {
+                  const on = draft.notify === mode.value;
+                  return (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => patch({ notify: mode.value })}
+                      className={cn(
+                        "flex min-h-11 flex-col gap-1 rounded-lg border p-3.5 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        on
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-muted-foreground/50"
+                      )}
+                    >
+                      <span className={cn("text-sm font-semibold", on && "text-link")}>
+                        {mode.label}
+                      </span>
+                      <span className="text-[13px] leading-snug text-muted-foreground">
+                        {mode.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`${ids}-ping`} className="text-[13px] text-foreground/80">
+                Ping URL <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id={`${ids}-ping`}
+                type="url"
+                inputMode="url"
+                value={draft.ping_url}
+                onChange={(e) => patch({ ping_url: e.target.value })}
+                placeholder="https://hc-ping.com/your-check-uuid"
+                spellCheck={false}
+                autoComplete="off"
+                className="font-mono"
+                aria-describedby={`${ids}-ping-hint`}
+              />
+              <p id={`${ids}-ping-hint`} className="text-[13px] text-muted-foreground">
+                For healthchecks.io or an Uptime Kuma push monitor. Called after
+                each successful run, with <span className="font-mono">/fail</span>{" "}
+                appended when a run fails.
               </p>
             </div>
           </div>

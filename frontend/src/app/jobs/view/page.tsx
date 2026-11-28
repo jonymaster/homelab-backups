@@ -3,7 +3,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArchiveIcon, SearchXIcon } from "lucide-react";
+import {
+  ArchiveIcon,
+  BellIcon,
+  FilterIcon,
+  HeartPulseIcon,
+  HistoryIcon,
+  SearchXIcon,
+} from "lucide-react";
 import { Bar, BarChart, Cell, ReferenceLine, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,12 +48,14 @@ import {
   formatWhen,
 } from "@/lib/format";
 import {
+  useClock,
   useJob,
   useJobStats,
   useServerTimeZone,
   useSnapshots,
 } from "@/lib/queries";
 import { idParam, useSearchParamState } from "@/hooks/use-search-param-state";
+import { notifySummary, retentionSummary } from "@/lib/job-options";
 import { describeCron } from "@/utils/schedule";
 
 const TABS = ["overview", "runs", "snapshots", "settings"] as const;
@@ -76,9 +85,49 @@ const chartConfig = {
   size: { label: "Data added", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
+function OptionsSummary({ job }: { job: Job }) {
+  const presets = job.exclude_presets?.length ?? 0;
+  const patterns = job.exclude_patterns?.length ?? 0;
+  const exclusions = [
+    presets > 0 && `${presets} preset${presets === 1 ? "" : "s"}`,
+    patterns > 0 && `${patterns} pattern${patterns === 1 ? "" : "s"}`,
+  ].filter(Boolean);
+  const items = [
+    { icon: HistoryIcon, text: retentionSummary(job.retention_days ?? null) },
+    { icon: BellIcon, text: notifySummary(job.notify ?? "default") },
+    {
+      icon: FilterIcon,
+      text: exclusions.length ? `Skips ${exclusions.join(" + ")}` : "Backs up everything",
+    },
+    ...(job.ping_url ? [{ icon: HeartPulseIcon, text: "Pings a monitor" }] : []),
+  ];
+  return (
+    <ul
+      aria-label="Job options"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-muted-foreground"
+    >
+      {items.map(({ icon: Icon, text }) => (
+        <li key={text} className="flex items-center gap-1.5">
+          <Icon className="size-3.5" aria-hidden />
+          {text}
+        </li>
+      ))}
+      <li>
+        <Link
+          href={`/jobs/view?id=${job.id}&tab=settings`}
+          className="font-medium text-link hover:underline"
+        >
+          Change
+        </Link>
+      </li>
+    </ul>
+  );
+}
+
 function Overview({ job }: { job: Job }) {
   const { data: stats, error, refetch } = useJobStats(job.id);
   const timeZone = useServerTimeZone();
+  const clock = useClock();
 
   if (error && !stats) {
     return <ErrorState error={error} onRetry={() => refetch()} title="Couldn't load stats" />;
@@ -105,6 +154,7 @@ function Overview({ job }: { job: Job }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <OptionsSummary job={job} />
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
         <StatCard
           label="Success rate"
@@ -158,7 +208,7 @@ function Overview({ job }: { job: Job }) {
                       hideIndicator
                       labelFormatter={(_, payload) => {
                         const at = payload?.[0]?.payload?.at as string | undefined;
-                        return at ? formatWhen(new Date(at), timeZone) : "";
+                        return at ? formatWhen(new Date(at), timeZone, undefined, clock) : "";
                       }}
                       formatter={(value, _name, item) => (
                         <div className="flex flex-col gap-0.5">
@@ -257,6 +307,7 @@ function JobDetail({ id }: { id: number }) {
   const router = useRouter();
   const [params, update] = useSearchParamState();
   const { data: job, error, refetch } = useJob(id);
+  const clock = useClock();
   const tab: Tab = TABS.find((t) => t === params.get("tab")) ?? "overview";
 
   if (error && !job) {
@@ -312,7 +363,7 @@ function JobDetail({ id }: { id: number }) {
             <HealthBadge health={job.health} />
           </div>
           <p className="text-sm text-muted-foreground">
-            {describeCron(job.schedule)}
+            {describeCron(job.schedule, clock)}
             {" · "}
             {job.paused ? (
               <span className="text-paused">paused, no scheduled runs</span>

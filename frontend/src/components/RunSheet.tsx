@@ -21,7 +21,7 @@ import {
   formatSizeChange,
   formatWhen,
 } from "@/lib/format";
-import { useRun, useServerTimeZone } from "@/lib/queries";
+import { useClock, useRun, useServerTimeZone } from "@/lib/queries";
 import { useNow } from "@/hooks/use-now";
 import { ErrorState } from "./PageStates";
 import RelativeTime from "./RelativeTime";
@@ -120,6 +120,7 @@ export default function RunSheet({
   // Previous data is kept only for the closing animation, not across runs.
   const run = data && (runId === null || data.id === runId) ? data : undefined;
   const timeZone = useServerTimeZone();
+  const clock = useClock();
 
   return (
     <Sheet open={runId !== null} onOpenChange={(open) => !open && onClose()}>
@@ -130,7 +131,7 @@ export default function RunSheet({
           </span>
           <SheetTitle className="text-xl font-bold">
             {run?.started_at
-              ? formatWhen(new Date(run.started_at), timeZone)
+              ? formatWhen(new Date(run.started_at), timeZone, undefined, clock)
               : run
                 ? `Run #${run.id}`
                 : "Loading run"}

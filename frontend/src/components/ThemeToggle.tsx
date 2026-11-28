@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { markThemeChosen } from "./DefaultTheme";
 
 const OPTIONS = [
   { value: "light", label: "Light", icon: SunIcon },
@@ -26,6 +27,10 @@ function useMounted() {
 export default function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const mounted = useMounted();
+  const choose = (value: string) => {
+    markThemeChosen();
+    setTheme(value);
+  };
 
   if (compact) {
     const next = resolvedTheme === "dark" ? "light" : "dark";
@@ -35,7 +40,7 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
         variant="ghost"
         size="icon"
         className="size-11"
-        onClick={() => setTheme(next)}
+        onClick={() => choose(next)}
         aria-label={`Switch to ${next} theme`}
       >
         <Icon />
@@ -58,7 +63,7 @@ export default function ThemeToggle({ compact = false }: { compact?: boolean }) 
             aria-pressed={checked}
             aria-label={option.label}
             title={option.label}
-            onClick={() => setTheme(option.value)}
+            onClick={() => choose(option.value)}
             className={cn(
               "flex h-9 items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
               checked && "bg-raised text-foreground"

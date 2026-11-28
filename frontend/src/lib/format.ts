@@ -87,23 +87,55 @@ export function dayKey(date: Date, timeZone?: string): string {
   }).format(date);
 }
 
-const time = (date: Date, timeZone?: string) =>
-  new Intl.DateTimeFormat("en-GB", {
+export type Clock = "24h" | "12h";
+
+const hourOptions = (clock: Clock): Intl.DateTimeFormatOptions =>
+  clock === "12h"
+    ? { hour: "numeric", minute: "2-digit", hour12: true }
+    : { hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
+
+/** "18:30" or "6:30 PM". */
+export function formatTime(
+  date: Date,
+  timeZone?: string,
+  clock: Clock = "24h"
+): string {
+  return new Intl.DateTimeFormat(clock === "12h" ? "en-US" : "en-GB", {
     timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
+    ...hourOptions(clock),
   }).format(date);
+}
+
+/** Wall-clock time without a date: (2, 0) → "02:00" or "2:00 AM". */
+export function formatClockTime(
+  hour: number,
+  minute: number,
+  clock: Clock = "24h"
+): string {
+  const mm = String(minute).padStart(2, "0");
+  if (clock === "24h") return `${String(hour).padStart(2, "0")}:${mm}`;
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${mm} ${hour < 12 ? "AM" : "PM"}`;
+}
+
+/** "HH:MM" from settings → formatted per clock; invalid input is returned as is. */
+export function formatTimeString(value: string, clock: Clock = "24h"): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value);
+  if (!match) return value;
+  return formatClockTime(Number(match[1]), Number(match[2]), clock);
+}
 
 /** "Today 18:30", "Yesterday 18:34", "Tomorrow 03:00", "Thu 02:00", "Nov 14 18:30". */
 export function formatWhen(
   date: Date,
   timeZone?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  clock: Clock = "24h"
 ): string {
   const key = dayKey(date, timeZone);
   const offsetKey = (days: number) =>
     dayKey(new Date(now.getTime() + days * DAY * 1000), timeZone);
-  const t = time(date, timeZone);
+  const t = formatTime(date, timeZone, clock);
   if (key === offsetKey(0)) return `Today ${t}`;
   if (key === offsetKey(-1)) return `Yesterday ${t}`;
   if (key === offsetKey(1)) return `Tomorrow ${t}`;
@@ -125,16 +157,19 @@ export function formatWhen(
   return `${day} ${t}`;
 }
 
-/** Full timestamp for tooltips: "Fri, 28 Nov 2026, 18:30:05 (Europe/Paris)". */
-export function formatExact(date: Date, timeZone?: string): string {
+/** Full timestamp for tooltips: "Fri, 28 Nov 2026, 18:30:05 (Europe/Paris)" or "…, 6:30:05 pm (…)". */
+export function formatExact(
+  date: Date,
+  timeZone?: string,
+  clock: Clock = "24h"
+): string {
   const text = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     weekday: "short",
     day: "numeric",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    ...hourOptions(clock),
     second: "2-digit",
   }).format(date);
   return timeZone ? `${text} (${timeZone})` : text;
@@ -148,6 +183,9 @@ export function formatShortDate(date: Date, timeZone?: string): string {
     day: "numeric",
   }).format(date);
 }
+
+/** "0.4.0" → "v0.4.0"; non-numeric builds like "dev" stay as they are. */
+export const formatVersion = (v: string) => (/^\d/.test(v) ? `v${v}` : v);
 
 /** Returns the zone when the runtime knows it, so bad values never throw later. */
 export function validTimeZone(zone: string | undefined): string | undefined {

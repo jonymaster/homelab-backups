@@ -4,16 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
+  ArrowUpCircleIcon,
   DatabaseIcon,
   LayoutDashboardIcon,
   ListIcon,
   PlusIcon,
+  SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useServer } from "@/lib/queries";
-import { validTimeZone } from "@/lib/format";
+import { useClock, useServer, useUpdates } from "@/lib/queries";
+import { formatTime, formatVersion, validTimeZone } from "@/lib/format";
 import { useNow } from "@/hooks/use-now";
+import DefaultTheme from "./DefaultTheme";
 import ThemeToggle from "./ThemeToggle";
 
 interface NavItem {
@@ -42,6 +45,12 @@ const NAV: NavItem[] = [
     icon: ActivityIcon,
     match: (p) => p.startsWith("/activity"),
   },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: SettingsIcon,
+    match: (p) => p.startsWith("/settings"),
+  },
 ];
 
 function Logo() {
@@ -59,16 +68,13 @@ function Logo() {
 function ServerClock() {
   const { data, isError } = useServer();
   const now = useNow();
+  const clockSetting = useClock();
   if (isError) {
     return <span className="text-muted-foreground">Server unreachable</span>;
   }
   if (!data) return <span className="text-muted-foreground">Connecting…</span>;
   const timeZone = validTimeZone(data.timezone);
-  const clock = new Intl.DateTimeFormat("en-GB", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(now);
+  const clock = formatTime(now, timeZone, clockSetting);
   return (
     <>
       <span className="text-muted-foreground">Server time</span>
@@ -76,9 +82,23 @@ function ServerClock() {
         {clock} · {data.timezone}
       </span>
       <span className="text-muted-foreground">
-        {/^\d/.test(data.version) ? `v${data.version}` : data.version}
+        {formatVersion(data.version)}
       </span>
     </>
+  );
+}
+
+function UpdateBadge() {
+  const { data } = useUpdates();
+  if (!data?.update_available || !data.latest) return null;
+  return (
+    <Link
+      href="/settings?section=maintenance"
+      className="flex min-h-11 items-center gap-2 rounded-xl border border-stale/40 bg-stale/8 px-3 text-[13px] font-medium text-stale outline-none hover:bg-stale/12 focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <ArrowUpCircleIcon className="size-4" aria-hidden />
+      Update available: {formatVersion(data.latest)}
+    </Link>
   );
 }
 
@@ -93,6 +113,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       >
         Skip to content
       </a>
+      <DefaultTheme />
 
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r border-divider px-4 py-6 lg:flex">
         <Logo />
@@ -116,6 +137,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="mt-auto flex flex-col gap-3">
+          <UpdateBadge />
           <ThemeToggle />
           <div className="flex flex-col gap-1 rounded-xl border bg-card p-3 text-[13px]">
             <ServerClock />
@@ -137,16 +159,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-divider bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-divider bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
         {[
-          ...NAV,
+          ...NAV.slice(0, -1),
           {
             href: "/jobs/new",
             label: "New",
             icon: PlusIcon,
             match: (p: string) => p === "/jobs/new",
           },
+          ...NAV.slice(-1),
         ].map((item) => {
           const active =
             item.href === "/jobs"

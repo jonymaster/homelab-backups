@@ -11,7 +11,7 @@ import RelativeTime from "@/components/RelativeTime";
 import { HEALTH, HealthBadge, HistoryBars } from "@/components/Status";
 import type { Job, JobHealth } from "@/lib/api";
 import { formatDuration, formatSizeChange } from "@/lib/format";
-import { useJobs } from "@/lib/queries";
+import { useClock, useJobs } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useSearchParamState } from "@/hooks/use-search-param-state";
 import { describeCron } from "@/utils/schedule";
@@ -97,6 +97,7 @@ function LastRun({ job }: { job: Job }) {
 }
 
 function JobRow({ job }: { job: Job }) {
+  const clock = useClock();
   return (
     <li className="flex flex-wrap items-center gap-x-5 gap-y-4 rounded-xl border bg-card px-5 py-4.5 xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_auto_auto]">
       <div className="flex min-w-0 flex-[2_1_240px] flex-col gap-1.5">
@@ -119,7 +120,7 @@ function JobRow({ job }: { job: Job }) {
       </div>
       <div className="min-w-0 flex-[1_1_140px]">
         <Field label="Schedule">
-          <span className="text-sm">{describeCron(job.schedule)}</span>
+          <span className="text-sm">{describeCron(job.schedule, clock)}</span>
         </Field>
       </div>
       <div className="min-w-0 flex-[1_1_140px]">
