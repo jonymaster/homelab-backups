@@ -9,6 +9,8 @@ from utils import repository
 from utils.job_summary import NEWEST_FIRST, job_summary
 from utils.scheduler_service import add_job, remove_job
 from utils.backup_utils import execute_backup, try_mark_running
+from utils.excludes import EXCLUDE_PRESETS
+from utils.settings import get_settings
 
 router = APIRouter()
 
@@ -31,18 +33,27 @@ def get_job_or_404(db: Session, job_id: int) -> BackupJob:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
-@router.post("/jobs", response_model=JobRead)
-@router.post("/jobs/", response_model=JobRead)
-def create_backup_job(job: BackupJobCreate, db: Session = Depends(get_db)):
+DEFAULTED_FIELDS = ("retention_days", "exclude_presets", "exclude_patterns")
+
+def create_job(db: Session, job: BackupJobCreate, paused: bool = False) -> BackupJob:
     check_conflicts(db, job)
-    db_job = BackupJob(**job.model_dump())
+    values = job.model_dump()
+    defaults = get_settings(db).defaults
+    for key in DEFAULTED_FIELDS:
+        if key not in job.model_fields_set:
+            values[key] = getattr(defaults, key)
+    db_job = BackupJob(**values, paused=paused)
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
 
-    add_job(db_job.id, job.schedule)
+    add_job(db_job.id, job.schedule, paused)
+    return db_job
 
-    return job_summary(db, db_job)
+@router.post("/jobs", response_model=JobRead)
+@router.post("/jobs/", response_model=JobRead)
+def create_backup_job(job: BackupJobCreate, db: Session = Depends(get_db)):
+    return job_summary(db, create_job(db, job))
 
 @router.put("/jobs/{job_id}", response_model=JobRead)
 @router.put("/jobs/{job_id}/", response_model=JobRead)
@@ -50,10 +61,9 @@ def update_backup_job(job_id: int, updated_job: BackupJobCreate, db: Session = D
     db_job = get_job_or_404(db, job_id)
     check_conflicts(db, updated_job, exclude_id=job_id)
 
-    db_job.name = updated_job.name
-    db_job.source = updated_job.source
-    db_job.destination = updated_job.destination
-    db_job.schedule = updated_job.schedule
+    # Omitted fields keep their stored value.
+    for key, value in updated_job.model_dump(include=updated_job.model_fields_set).items():
+        setattr(db_job, key, value)
 
     db.commit()
     db.refresh(db_job)
@@ -62,6 +72,11 @@ def update_backup_job(job_id: int, updated_job: BackupJobCreate, db: Session = D
     add_job(db_job.id, updated_job.schedule, db_job.paused)
 
     return job_summary(db, db_job)
+
+@router.get("/exclude-presets")
+@router.get("/exclude-presets/")
+def get_exclude_presets():
+    return EXCLUDE_PRESETS
 
 @router.get("/jobs", response_model=List[JobRead])
 @router.get("/jobs/", response_model=List[JobRead])

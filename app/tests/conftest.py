@@ -1,6 +1,7 @@
 import os
 import sys
 import tempfile
+from concurrent.futures import Future
 
 import pytest
 
@@ -15,21 +16,33 @@ from fastapi.testclient import TestClient  # noqa: E402
 from db.migrate import run_migrations  # noqa: E402
 from db.session import SessionLocal  # noqa: E402
 from main import app  # noqa: E402
-from models.models import BackupJob, BackupResult  # noqa: E402
-from utils import repository  # noqa: E402
+from models.models import (  # noqa: E402
+    BackupJob, BackupResult, NotificationChannel, NotificationLog, NotificationState, Setting,
+)
+from utils import notifications, repository  # noqa: E402
 from utils.scheduler_service import scheduler  # noqa: E402
 
 run_migrations()
 
 
+class InlineExecutor:
+    """Runs submitted notification work immediately so tests are deterministic."""
+
+    def submit(self, fn, *args):
+        future = Future()
+        future.set_result(fn(*args))
+        return future
+
+
 @pytest.fixture(autouse=True)
-def clean_state():
+def clean_state(monkeypatch):
     with SessionLocal() as db:
-        db.query(BackupResult).delete()
-        db.query(BackupJob).delete()
+        for model in (BackupResult, BackupJob, Setting, NotificationChannel, NotificationLog, NotificationState):
+            db.query(model).delete()
         db.commit()
     scheduler.remove_all_jobs()
     repository.clear()
+    monkeypatch.setattr(notifications, "executor", InlineExecutor())
     yield
     scheduler.remove_all_jobs()
 

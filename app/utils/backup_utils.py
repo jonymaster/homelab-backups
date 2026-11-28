@@ -1,11 +1,17 @@
 import re
 import subprocess
 import logging
+import urllib.request
 from sqlalchemy.orm import Session
 from db.session import SessionLocal
 from models.models import BackupJob, BackupResult
 from datetime import datetime
 from utils import repository
+from utils.excludes import exclude_args
+from utils.notifications import dispatch_run
+
+PING_TIMEOUT = 5
+RETENTION_TIMEOUT = 6 * 3600
 
 STAT_COLUMNS = {
     "SourceFiles": "source_files",
@@ -47,6 +53,33 @@ def parse_statistics(output: str) -> dict:
     return stats
 
 
+def remove_old_increments(destination: str, days: int) -> str:
+    """Apply retention; returns log text. Failures are logged but never fail the run."""
+    # --force is required as soon as more than one increment would be removed.
+    command = ["rdiff-backup", "--api-version", "201", "--force", "remove", "increments",
+               "--older-than", f"{days}D", destination]
+    header = f"\n--- Retention: removing increments older than {days} days\n"
+    try:
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                timeout=RETENTION_TIMEOUT)
+    except (OSError, subprocess.SubprocessError) as e:
+        return f"{header}RETENTION ERROR: {e}\n"
+    # Exit code 2 means warnings only, e.g. nothing old enough to remove.
+    if result.returncode in (0, 2):
+        return header + result.stdout
+    return f"{header}{result.stdout}RETENTION ERROR: rdiff-backup exited with code {result.returncode}\n"
+
+
+def ping(url: str, status: str):
+    target = url if status == "success" else url.rstrip("/") + "/fail"
+    try:
+        with urllib.request.urlopen(urllib.request.Request(target, headers={"User-Agent": "homelab-backups"}),
+                                    timeout=PING_TIMEOUT):
+            pass
+    except Exception as e:
+        logging.warning(f"Ping to {target} failed: {e}")
+
+
 def try_mark_running(db: Session, job_id: int) -> bool:
     """Atomically set the job to running. Returns False if it was already running."""
     updated = (
@@ -85,6 +118,7 @@ def execute_backup(job_id: int):
         try:
             command = [
                 "rdiff-backup", "--api-version", "201", "backup", "--print-statistics",
+                *exclude_args(job.source, job.exclude_presets or [], job.exclude_patterns or []),
                 job.source, job.destination
             ]
             result = subprocess.run(command, check=True, stdout=subprocess.PIPE,
@@ -93,6 +127,8 @@ def execute_backup(job_id: int):
             status = "success"
             message = "Backup successful"
             output = result.stdout
+            if job.retention_days:
+                output += remove_old_increments(job.destination, job.retention_days)
         except subprocess.CalledProcessError as e:
             output = e.output or ""
         except Exception as e:
@@ -117,5 +153,8 @@ def execute_backup(job_id: int):
             repository.invalidate(job.destination)
 
         logging.info(message)
+        if job.ping_url:
+            ping(job.ping_url, status)
+        dispatch_run(run.id)
 
         return status, message
