@@ -1,35 +1,46 @@
+import os
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-from datetime import datetime
-from typing import List
+from typing import List, Optional
 from db.session import get_db
 from models.models import BackupJob, BackupResult
-from models.schemas import BackupJobBase, BackupJobRead
+from models.schemas import BackupJobCreate, BackupJobRead
 from utils.scheduler_service import add_job, remove_job
-from utils.backup_utils import execute_backup
-from routes.backup_result import delete_results_for_job
+from utils.backup_utils import execute_backup, try_mark_running
 
 router = APIRouter()
 
+def check_conflicts(db: Session, job: BackupJobCreate, exclude_id: Optional[int] = None):
+    destination = os.path.normpath(job.destination)
+    for other in db.query(BackupJob).filter(BackupJob.id != exclude_id).all():
+        if other.name == job.name:
+            raise HTTPException(status_code=409, detail=f"A job named '{job.name}' already exists")
+        if os.path.normpath(other.destination) == destination:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Destination '{job.destination}' is already used by job '{other.name}'",
+            )
+
 @router.post("/jobs", response_model=BackupJobRead)
 @router.post("/jobs/", response_model=BackupJobRead)
-def create_backup_job(job: BackupJobBase, db: Session = Depends(get_db)):
+def create_backup_job(job: BackupJobCreate, db: Session = Depends(get_db)):
+    check_conflicts(db, job)
     db_job = BackupJob(**job.model_dump())
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
 
-    cron_args = parse_schedule(job.schedule)
-    add_job(db_job.id, cron_args)
+    add_job(db_job.id, job.schedule)
 
     return db_job
 
 @router.put("/jobs/{job_id}", response_model=BackupJobRead)
 @router.put("/jobs/{job_id}/", response_model=BackupJobRead)
-def update_backup_job(job_id: int, updated_job: BackupJobBase, db: Session = Depends(get_db)):
+def update_backup_job(job_id: int, updated_job: BackupJobCreate, db: Session = Depends(get_db)):
     db_job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_conflicts(db, updated_job, exclude_id=job_id)
 
     db_job.name = updated_job.name
     db_job.source = updated_job.source
@@ -40,8 +51,7 @@ def update_backup_job(job_id: int, updated_job: BackupJobBase, db: Session = Dep
     db.refresh(db_job)
 
     remove_job(job_id)
-    cron_args = parse_schedule(updated_job.schedule)
-    add_job(db_job.id, cron_args)
+    add_job(db_job.id, updated_job.schedule)
 
     return db_job
 
@@ -66,8 +76,10 @@ def execute_backup_job(job_id: int, background_tasks: BackgroundTasks, db: Sessi
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
+    if not try_mark_running(db, job_id):
+        raise HTTPException(status_code=409, detail="Job is already running")
 
-    background_tasks.add_task(execute_backup, job.id)
+    background_tasks.add_task(execute_backup, job_id)
 
     return {"message": "Backup job execution started"}
 
@@ -77,13 +89,10 @@ def delete_backup_job(job_id: int, db: Session = Depends(get_db)):
     job = db.query(BackupJob).filter(BackupJob.id == job_id).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    delete_results_for_job(job_id, db)
+    db.query(BackupResult).filter(BackupResult.job_id == job_id).delete()
     db.delete(job)
     db.commit()
 
     remove_job(job_id)
 
     return {"message": "Job deleted successfully"}
-
-def parse_schedule(schedule_str: str):
-    return {"minute": schedule_str.split()[0], "hour": schedule_str.split()[1]}
