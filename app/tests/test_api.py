@@ -12,7 +12,8 @@ from utils.scheduler_service import run_scheduled_backup, scheduler
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 JOB_FIELDS = {
     "id", "name", "source", "destination", "schedule", "status", "paused", "created_at", "next_run",
-    "last_run", "last_success_at", "health", "history", "success_rate_30d", "avg_duration_30d",
+    "last_run", "last_success_at", "health", "history", "success_rate_30d", "avg_duration_30d", "retention_days",
+    "exclude_presets", "exclude_patterns", "notify", "ping_url",
 }
 RUN_FIELDS = {
     "id", "job_id", "job_name", "status", "started_at", "finished_at", "duration_seconds", "source_files",

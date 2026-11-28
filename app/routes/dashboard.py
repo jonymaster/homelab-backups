@@ -1,5 +1,4 @@
 import os
-import shutil
 from collections import Counter
 from datetime import date, datetime, timedelta
 from fastapi import APIRouter, Depends
@@ -8,6 +7,7 @@ from tzlocal import get_localzone_name
 from db.session import get_db
 from models.models import BackupJob, BackupResult
 from models.schemas import Dashboard, ServerInfo
+from utils.disks import disk_usage
 from utils.job_summary import FINISHED, job_summary
 from utils.scheduler_service import fire_times
 
@@ -15,17 +15,6 @@ router = APIRouter()
 
 UPCOMING_SIZE = 5
 CALENDAR_DAYS = 30
-
-def disk_usage():
-    disks = []
-    for path in os.getenv("DISK_PATHS", "/app/destination").split(","):
-        path = path.strip()
-        try:
-            usage = shutil.disk_usage(path)
-        except OSError:
-            continue
-        disks.append({"path": path, "total_bytes": usage.total, "used_bytes": usage.used, "free_bytes": usage.free})
-    return disks
 
 def calendar(db: Session, jobs: list[BackupJob], today: date):
     first_day = today - timedelta(days=CALENDAR_DAYS - 1)

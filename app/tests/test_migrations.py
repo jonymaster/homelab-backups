@@ -1,10 +1,12 @@
 from datetime import datetime
 
+from alembic import command
 from alembic.autogenerate import compare_metadata
+from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect, text
 
-from db.migrate import run_migrations
+from db.migrate import ALEMBIC_INI, run_migrations
 from db.session import Base
 
 # DDL emitted by Base.metadata.create_all before migrations existed.
@@ -48,7 +50,7 @@ def test_adopts_existing_database(tmp_path):
     run_migrations(engine)
 
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0002"
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"
         runs = conn.execute(text(
             "SELECT id, status, started_at, finished_at, log, details FROM backup_results ORDER BY id")).all()
         jobs = conn.execute(text("SELECT id, name, status, paused, created_at FROM backup_jobs ORDER BY id")).all()
@@ -63,6 +65,42 @@ def test_adopts_existing_database(tmp_path):
     assert [(j.name, j.status, j.paused) for j in jobs] == [("photos", "success", 0), ("docs", "pending", 0)]
     assert jobs[0].created_at == "2026-01-02 02:00:05.123456"
     assert datetime.fromisoformat(jobs[1].created_at).date() == datetime.now().date()
+
+
+def test_0003_on_populated_database(tmp_path):
+    engine = make_engine(tmp_path)
+    with engine.begin() as conn:
+        for statement in OLD_SCHEMA:
+            conn.execute(text(statement))
+        conn.execute(text("INSERT INTO backup_jobs VALUES (1, 'photos', '/s', '/d', '0 2 * * *', 'completed')"))
+        conn.execute(text(
+            "INSERT INTO backup_results VALUES (1, 1, '2026-01-02T02:00:05', 'completed', 'ok', 'out')"))
+
+    config = Config(ALEMBIC_INI)
+    with engine.begin() as conn:
+        config.attributes["connection"] = conn
+        command.stamp(config, "0001")
+        command.upgrade(config, "0002")
+        conn.execute(text("INSERT INTO backup_jobs (id, name, source, destination, schedule, status, paused) "
+                          "VALUES (2, 'docs', '/s2', '/d2', '0 3 * * *', 'success', 1)"))
+
+    run_migrations(engine)
+    run_migrations(engine)
+
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "0003"
+        jobs = conn.execute(text(
+            "SELECT name, paused, retention_days, exclude_presets, exclude_patterns, notify, ping_url, "
+            "stale_notified_at FROM backup_jobs ORDER BY id")).all()
+        runs = conn.execute(text("SELECT status, log FROM backup_results")).all()
+        tables = set(inspect(conn).get_table_names())
+
+    assert [tuple(j) for j in jobs] == [
+        ("photos", 0, None, "[]", "[]", "default", None, None),
+        ("docs", 1, None, "[]", "[]", "default", None, None),
+    ]
+    assert [tuple(r) for r in runs] == [("success", "out")]
+    assert {"settings", "notification_channels", "notification_log", "notification_state"} <= tables
 
 
 def test_fresh_database_matches_models(tmp_path):

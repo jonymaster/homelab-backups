@@ -1,7 +1,8 @@
 from datetime import datetime
 from apscheduler.triggers.cron import CronTrigger
-from pydantic import AfterValidator, BaseModel, ConfigDict, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 from typing import Annotated, List, Literal, Optional
+from utils.excludes import validate_patterns, validate_presets
 
 # Naive datetimes are stored in server local time; expose them with their offset.
 LocalDatetime = Annotated[datetime, AfterValidator(lambda d: d.astimezone())]
@@ -11,6 +12,8 @@ def normalize_status(value: str) -> str:
 
 Status = Annotated[str, AfterValidator(normalize_status)]
 
+Notify = Literal["default", "always", "never"]
+
 class BackupJobBase(BaseModel):
     name: str
     source: str
@@ -19,6 +22,13 @@ class BackupJobBase(BaseModel):
 
 # Validation only on input, so reading legacy rows with a bad schedule still works.
 class BackupJobCreate(BackupJobBase):
+    """Omitted optional fields are filled by the route: settings defaults on create, stored values on update."""
+    retention_days: Optional[int] = Field(None, ge=1)
+    exclude_presets: Annotated[List[str], AfterValidator(validate_presets)] = []
+    exclude_patterns: Annotated[List[str], AfterValidator(validate_patterns)] = []
+    notify: Notify = "default"
+    ping_url: Optional[str] = None
+
     @field_validator("schedule")
     @classmethod
     def validate_schedule(cls, value: str) -> str:
@@ -26,6 +36,16 @@ class BackupJobCreate(BackupJobBase):
             CronTrigger.from_crontab(value)
         except ValueError as e:
             raise ValueError(f"Invalid cron schedule (expected 5 fields): {e}")
+        return value
+
+    @field_validator("ping_url")
+    @classmethod
+    def validate_ping_url(cls, value: Optional[str]) -> Optional[str]:
+        value = (value or "").strip()
+        if not value:
+            return None
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("ping_url must start with http:// or https://")
         return value
 
 class LastRun(BaseModel):
@@ -41,6 +61,11 @@ class JobRead(BackupJobBase):
     id: int
     status: Status
     paused: bool
+    retention_days: Optional[int]
+    exclude_presets: List[str]
+    exclude_patterns: List[str]
+    notify: Notify
+    ping_url: Optional[str]
     created_at: Optional[LocalDatetime]
     next_run: Optional[LocalDatetime]
     last_run: Optional[LastRun]

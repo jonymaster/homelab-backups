@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from db.session import Base
 
@@ -15,6 +15,13 @@ class BackupJob(Base):
     status = Column(String, default="pending")
     paused = Column(Boolean, nullable=False, default=False, server_default="0")
     created_at = Column(DateTime, default=datetime.now)
+    retention_days = Column(Integer)
+    exclude_presets = Column(JSON, nullable=False, default=list, server_default="[]")
+    exclude_patterns = Column(JSON, nullable=False, default=list, server_default="[]")
+    notify = Column(String, nullable=False, default="default", server_default="default")
+    ping_url = Column(String)
+    # Set when a stale notification is sent, cleared by the next success.
+    stale_notified_at = Column(DateTime)
 
     results = relationship('BackupResult', back_populates='backup_job')
 
@@ -43,3 +50,39 @@ class BackupResult(Base):
     log = Column(Text)
 
     backup_job = relationship('BackupJob', back_populates='results')
+
+
+class Setting(Base):
+    __tablename__ = 'settings'
+
+    key = Column(String, primary_key=True)
+    value = Column(JSON, nullable=False)
+
+class NotificationChannel(Base):
+    __tablename__ = 'notification_channels'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False)
+    enabled = Column(Boolean, nullable=False, default=True, server_default="1")
+    config = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+
+class NotificationLog(Base):
+    __tablename__ = 'notification_log'
+
+    id = Column(Integer, primary_key=True)
+    at = Column(DateTime, nullable=False, index=True)
+    event = Column(String, nullable=False)
+    job_id = Column(Integer)
+    job_name = Column(String)
+    title = Column(String, nullable=False)
+    ok = Column(Boolean, nullable=False)
+    error = Column(Text)
+
+class NotificationState(Base):
+    """Last time a deduplicated notification was sent, by key (e.g. "disk_low:/path")."""
+    __tablename__ = 'notification_state'
+
+    key = Column(String, primary_key=True)
+    sent_at = Column(DateTime, nullable=False)
