@@ -26,6 +26,8 @@ services:
       - ${APP_DB_PATH}:/app/data
     environment:
       - TZ=${TZ:-Etc/UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
     restart: unless-stopped
   frontend:
     image: jonymaster/homelab-backups-frontend:latest
@@ -57,6 +59,8 @@ Alternatively, you can download the project and build it.
     BACKUP_DESTINATION=/path/to/backup/destination
     APP_DB_PATH=/path/to/app/db
     TZ=Etc/UTC
+    PUID=1000
+    PGID=1000
     ```
 
     As a security best practice, avoid to map ```"/"``` as ```BACKUP_SOURCE```.
@@ -74,11 +78,13 @@ Alternatively, you can download the project and build it.
 
 ## Volumes and permissions
 
-The backend runs as a non-root user (UID/GID 1000). ```BACKUP_DESTINATION``` and ```APP_DB_PATH``` must be writable by it:
+The backend runs as ```PUID```:```PGID``` (default 1000:1000). ```BACKUP_DESTINATION``` must be writable by that user; ```APP_DB_PATH``` is fixed up automatically at startup:
 
 ```bash
-sudo chown -R 1000:1000 /path/to/backup/destination /path/to/app/db
+sudo chown -R 1000:1000 /path/to/backup/destination
 ```
+
+Set ```PUID=0``` and ```PGID=0``` to run as root, for example to back up files only root can read or to keep file ownership in backups.
 
 ```BACKUP_SOURCE``` is mounted read-only and only needs to be readable.
 
