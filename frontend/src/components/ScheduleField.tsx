@@ -13,6 +13,7 @@ import {
 import { formatExact, formatWhen } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/hooks/use-now";
+import { useClock } from "@/lib/queries";
 import {
   DEFAULT_SCHEDULE,
   Frequency,
@@ -62,6 +63,7 @@ export default function ScheduleField({
 }: ScheduleFieldProps) {
   const ids = useId();
   const now = useNow();
+  const clock = useClock();
   const initialPreset = initialCron ? parseCron(initialCron) : DEFAULT_SCHEDULE;
   const [schedule, setSchedule] = useState<Schedule>(
     initialPreset ?? DEFAULT_SCHEDULE
@@ -109,11 +111,11 @@ export default function ScheduleField({
   const upcoming = effective ? nextRuns(effective, 3, timeZone, now) : [];
   const summary = advanced
     ? advancedParsed
-      ? summarize(advancedParsed)
+      ? summarize(advancedParsed, clock)
       : cron && !isCronShaped(cron)
         ? "A cron expression has 5 fields separated by spaces"
         : "Custom schedule"
-    : summarize(schedule);
+    : summarize(schedule, clock);
 
   return (
     <div className="flex flex-col gap-5">
@@ -288,9 +290,9 @@ export default function ScheduleField({
               <span
                 key={d.getTime()}
                 className="text-sm"
-                title={formatExact(d, timeZone)}
+                title={formatExact(d, timeZone, clock)}
               >
-                {formatWhen(d, timeZone, now)}
+                {formatWhen(d, timeZone, now, clock)}
               </span>
             ))
           ) : (

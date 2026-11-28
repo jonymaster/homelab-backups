@@ -28,7 +28,7 @@ import {
   formatShortDate,
   formatSizeChange,
 } from "@/lib/format";
-import { useDashboard, useJobs, useRuns } from "@/lib/queries";
+import { useClock, useDashboard, useJobs, useRuns } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useNow } from "@/hooks/use-now";
 import { DESTINATION_ROOT, isInside } from "@/utils/paths";
@@ -283,6 +283,7 @@ function Calendar({ d }: { d: Dashboard }) {
 
 function Upcoming({ d, jobs }: { d: Dashboard; jobs: Job[] | undefined }) {
   const schedules = new Map(jobs?.map((j) => [j.id, j.schedule]));
+  const clock = useClock();
   return (
     <Card className="flex-[1_1_360px]">
       <h2 className="mb-1 flex min-h-11 items-center font-semibold">Upcoming</h2>
@@ -306,7 +307,7 @@ function Upcoming({ d, jobs }: { d: Dashboard; jobs: Job[] | undefined }) {
                 </Link>
                 {schedules.has(u.job_id) && (
                   <span className="text-[13px] text-muted-foreground">
-                    {describeCron(schedules.get(u.job_id)!)}
+                    {describeCron(schedules.get(u.job_id)!, clock)}
                   </span>
                 )}
               </div>
