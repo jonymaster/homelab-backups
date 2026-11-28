@@ -161,3 +161,87 @@ export function describeCron(cron: string): string {
   const parsed = parseCron(cron);
   return parsed ? summarize(parsed) : "Custom schedule";
 }
+
+interface WallClock {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+function wallClock(date: Date, timeZone?: string): WallClock {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  }).formatToParts(date);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+}
+
+const utcOf = (w: WallClock) =>
+  Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute);
+
+/** The instant at which the wall clock in `timeZone` reads `w`. */
+function instantOf(w: WallClock, timeZone?: string): Date {
+  const guess = utcOf(w);
+  const offsetAt = (t: number) =>
+    utcOf(wallClock(new Date(t), timeZone)) - Math.floor(t / 60000) * 60000;
+  const first = guess - offsetAt(guess);
+  // A second pass corrects guesses that land across a DST change.
+  return new Date(guess - offsetAt(first));
+}
+
+/** Upcoming run times for a preset, evaluated in the server time zone. */
+export function nextRuns(
+  s: Schedule,
+  count: number,
+  timeZone?: string,
+  now: Date = new Date()
+): Date[] {
+  if (s.frequency === "weekly" && s.weekdays.length === 0) return [];
+  const today = wallClock(now, timeZone);
+  const runs: Date[] = [];
+  for (let offset = 0; offset < 400 && runs.length < count; offset++) {
+    const day = new Date(
+      Date.UTC(today.year, today.month - 1, today.day + offset)
+    );
+    const matches =
+      s.frequency === "hourly" ||
+      s.frequency === "daily" ||
+      (s.frequency === "weekly" && s.weekdays.includes(day.getUTCDay())) ||
+      (s.frequency === "monthly" && day.getUTCDate() === s.dayOfMonth);
+    if (!matches) continue;
+    const hours =
+      s.frequency === "hourly"
+        ? Array.from({ length: 24 }, (_, h) => h)
+        : [s.hour];
+    for (const hour of hours) {
+      const at = instantOf(
+        {
+          year: day.getUTCFullYear(),
+          month: day.getUTCMonth() + 1,
+          day: day.getUTCDate(),
+          hour,
+          minute: s.minute,
+        },
+        timeZone
+      );
+      if (at > now) runs.push(at);
+      if (runs.length === count) break;
+    }
+  }
+  return runs;
+}
