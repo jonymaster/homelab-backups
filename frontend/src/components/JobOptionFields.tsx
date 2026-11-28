@@ -187,8 +187,9 @@ export function ExclusionFields({
           aria-describedby={`${id}-patterns-hint`}
         />
         <p id={`${id}-patterns-hint`} className="text-[13px] text-muted-foreground">
-          One rdiff-backup glob per line. <span className="font-mono">**</span>{" "}
-          matches any folder depth.
+          One glob per line. Start with <span className="font-mono">**/</span>{" "}
+          to match at any depth; other patterns are relative to the source
+          folder.
         </p>
       </div>
     </div>
