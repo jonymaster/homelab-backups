@@ -1,6 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_SCHEDULE, nextRuns, parseCron, toCron } from "./schedule.ts";
+import {
+  DEFAULT_SCHEDULE,
+  describeCron,
+  nextRuns,
+  parseCron,
+  toCron,
+} from "./schedule.ts";
+
+test("summaries follow the clock", () => {
+  assert.equal(describeCron("30 2 * * *"), "Every day at 02:30");
+  assert.equal(describeCron("30 14 * * 1", "12h"), "Every Mon at 2:30 PM");
+});
 
 test("toCron and parseCron round-trip a weekly preset", () => {
   const weekly = { ...DEFAULT_SCHEDULE, frequency: "weekly" as const, weekdays: [1, 4] };

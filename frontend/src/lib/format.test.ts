@@ -2,12 +2,35 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   formatBytes,
+  formatClockTime,
   formatDuration,
   formatPercent,
   formatRelative,
   formatSizeChange,
+  formatTime,
+  formatTimeString,
   formatWhen,
 } from "./format.ts";
+
+test("12h and 24h clocks", () => {
+  assert.equal(formatClockTime(2, 0), "02:00");
+  assert.equal(formatClockTime(0, 5, "12h"), "12:05 AM");
+  assert.equal(formatClockTime(12, 30, "12h"), "12:30 PM");
+  assert.equal(formatClockTime(18, 30, "12h"), "6:30 PM");
+  assert.equal(formatTimeString("09:00", "12h"), "9:00 AM");
+  assert.equal(formatTimeString("bad", "12h"), "bad");
+  const at = new Date("2026-11-28T18:30:00Z");
+  assert.equal(formatTime(at, "UTC"), "18:30");
+  assert.match(formatTime(at, "UTC", "12h"), /^6:30\sPM$/);
+});
+
+test("formatWhen follows the clock", () => {
+  const now = new Date("2026-11-28T12:00:00Z");
+  assert.match(
+    formatWhen(new Date("2026-11-28T18:30:00Z"), "UTC", now, "12h"),
+    /^Today 6:30\sPM$/
+  );
+});
 
 test("formatBytes uses decimal units", () => {
   assert.equal(formatBytes(0), "0 B");
