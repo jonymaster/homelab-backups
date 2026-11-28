@@ -12,7 +12,11 @@ Pick a folder, pick where it goes, pick when. Homelab Backups runs [rdiff-backup
 - **Folder browser**: choose source and destination by clicking through your folders. Each job gets its own destination, so jobs never overwrite each other.
 - **Dashboard**: health of every job, 30-day run calendar, upcoming runs and free space on the backup disk.
 - **Full run history**: every run with duration, files new/changed/deleted, data added and errors, paginated and filterable. Open a run to read or download its log.
-- **Snapshots**: every backup is an incremental rdiff-backup snapshot you can list per job.
+- **Snapshots and retention**: every backup is an incremental rdiff-backup snapshot. Choose how long to keep them per job (7 days to forever).
+- **Exclusions**: skip caches, temporary files, `node_modules` and trash folders with one click, or add your own patterns.
+- **Notifications**: get told when a backup fails, recovers, misses its schedule or the disk is filling up, on ntfy, Gotify, Telegram, Discord, Slack, Pushover, email or any of 90+ [Apprise](https://github.com/caronc/apprise) services. Optional weekly summary.
+- **Monitoring**: per-job ping URL for healthchecks.io or Uptime Kuma, optional Prometheus `/metrics`, disk warning level.
+- **Settings and maintenance**: job defaults, 12h/24h clock, export and import of jobs and settings as YAML, database backup download, update check.
 - **Safe by default**: one run per job at a time, jobs stuck after a crash are reset, failed runs are flagged, and jobs can be paused instead of deleted.
 - **Homelab friendly**: two small images for amd64 and arm64, `PUID`/`PGID`, health checks, dark and light themes, works on a phone.
 
@@ -120,9 +124,9 @@ cd docker && docker compose up -d --build
 
 ## Roadmap
 
-- Retention and exclusions per job
 - Restore files from a snapshot
-- Notifications (ntfy, Gotify, Telegram, email)
+- Catch up on runs missed while the server was off
+- Optional login
 - NFS destinations
 - Remote destinations over SSH
 
