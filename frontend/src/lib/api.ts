@@ -1,3 +1,5 @@
+import type { Clock } from "./format";
+
 export type RunStatus = "success" | "failed" | "running";
 export type JobHealth =
   | "healthy"
@@ -15,7 +17,19 @@ export interface LastRun {
   size_change_bytes: number | null;
 }
 
-export interface Job {
+export type NotifyMode = "default" | "always" | "never";
+
+/** Per-job options; omitted on create, the backend applies settings defaults. */
+export interface JobOptions {
+  /** null keeps every increment. */
+  retention_days: number | null;
+  exclude_presets: string[];
+  exclude_patterns: string[];
+  notify: NotifyMode;
+  ping_url: string | null;
+}
+
+export interface Job extends JobOptions {
   id: number;
   name: string;
   source: string;
@@ -35,7 +49,8 @@ export interface Job {
   avg_duration_30d: number | null;
 }
 
-export type JobInput = Pick<Job, "name" | "source" | "destination" | "schedule">;
+export type JobInput = Pick<Job, "name" | "source" | "destination" | "schedule"> &
+  Partial<JobOptions>;
 
 export interface JobStats {
   total_runs: number;
@@ -121,6 +136,127 @@ export interface ServerInfo {
   version: string;
 }
 
+export type ThemeChoice = "dark" | "light" | "system";
+
+export type NotificationEvent =
+  | "run_failed"
+  | "run_recovered"
+  | "job_stale"
+  | "disk_low"
+  | "run_succeeded"
+  | "weekly_summary";
+
+export interface Settings {
+  general: {
+    clock: Clock;
+    default_theme: ThemeChoice;
+    base_url: string | null;
+  };
+  notifications: {
+    events: Record<NotificationEvent, boolean>;
+    /** 0 = Monday … 6 = Sunday */
+    weekly_summary_day: number;
+    /** "HH:MM" */
+    weekly_summary_time: string;
+  };
+  monitoring: {
+    /** 50..99 */
+    disk_warning_percent: number;
+    metrics_enabled: boolean;
+  };
+  defaults: {
+    retention_days: number | null;
+    exclude_presets: string[];
+    exclude_patterns: string[];
+    /** "HH:MM" */
+    schedule_time: string;
+  };
+  maintenance: {
+    update_check: boolean;
+  };
+}
+
+export type SettingsSection = keyof Settings;
+
+/** `PUT /settings` deep-merges each section. */
+export type SettingsPatch = { [K in SettingsSection]?: Partial<Settings[K]> };
+
+export interface ChannelField {
+  key: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+  default?: string | number | null;
+  placeholder?: string;
+  type?: "text" | "number" | "select";
+  options?: string[];
+}
+
+export interface ChannelType {
+  type: string;
+  label: string;
+  fields: ChannelField[];
+}
+
+export type ChannelConfig = Record<string, string | number>;
+
+export interface Channel {
+  id: number;
+  name: string;
+  type: string;
+  enabled: boolean;
+  /** Secrets come back as SECRET_PLACEHOLDER when set, "" when not. */
+  config: ChannelConfig;
+  created_at: string | null;
+}
+
+export interface ChannelInput {
+  name: string;
+  type: string;
+  enabled?: boolean;
+  config: ChannelConfig;
+}
+
+export type ChannelPatch = Partial<Pick<Channel, "name" | "enabled" | "config">>;
+
+export interface TestResult {
+  ok: boolean;
+  error: string | null;
+}
+
+export interface NotificationLogEntry {
+  id: number;
+  at: string;
+  event: NotificationEvent | "test";
+  job_id: number | null;
+  job_name: string | null;
+  title: string;
+  ok: boolean;
+  error: string | null;
+}
+
+export interface ExcludePreset {
+  id: string;
+  label: string;
+  patterns: string[];
+}
+
+export interface ImportResult {
+  jobs_created: number;
+  jobs_skipped: string[];
+  channels_created: number;
+  settings_applied: boolean;
+  errors: string[];
+}
+
+export interface UpdateInfo {
+  current: string;
+  latest: string | null;
+  update_available: boolean;
+  release_url: string | null;
+  checked_at: string | null;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -191,12 +327,43 @@ export const api = {
   run: (id: number) => request<RunDetail>(`/runs/${id}`),
   dashboard: () => request<Dashboard>("/dashboard"),
   server: () => request<ServerInfo>("/server"),
+  settings: () => request<Settings>("/settings"),
+  updateSettings: (patch: SettingsPatch) =>
+    send<Settings>("PUT", "/settings", patch),
+  channelTypes: () => request<ChannelType[]>("/notifications/channel-types"),
+  channels: () => request<Channel[]>("/notifications/channels"),
+  createChannel: (input: ChannelInput) =>
+    send<Channel>("POST", "/notifications/channels", input),
+  updateChannel: (id: number, patch: ChannelPatch) =>
+    send<Channel>("PUT", `/notifications/channels/${id}`, patch),
+  deleteChannel: (id: number) =>
+    send<void>("DELETE", `/notifications/channels/${id}`),
+  testChannel: (id: number) =>
+    send<TestResult>("POST", `/notifications/channels/${id}/test`),
+  testUnsavedChannel: (type: string, config: ChannelConfig) =>
+    send<TestResult>("POST", "/notifications/test", { type, config }),
+  notificationLog: (limit = 50) =>
+    request<NotificationLogEntry[]>(`/notifications/log${query({ limit })}`),
+  excludePresets: () => request<ExcludePreset[]>("/exclude-presets"),
+  importConfig: (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return request<ImportResult>("/import", { method: "POST", body });
+  },
+  updates: () => request<UpdateInfo>("/updates"),
   listDirectory: async (path: string) =>
     (
       await request<{ directories?: string[] }>(
         `/list-directory${query({ path })}`
       )
     ).directories ?? [],
+};
+
+/** Plain links so the browser handles the download and its file name. */
+export const downloads = {
+  export: "/api/export",
+  databaseBackup: "/api/backup/db",
+  metrics: "/api/metrics",
 };
 
 export const errorMessage = (error: unknown) =>

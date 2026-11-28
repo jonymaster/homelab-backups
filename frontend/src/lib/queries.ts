@@ -7,8 +7,15 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api, errorMessage, type Job, type RunQuery } from "./api";
-import { validTimeZone } from "./format";
+import {
+  api,
+  errorMessage,
+  type Job,
+  type RunQuery,
+  type Settings,
+  type SettingsPatch,
+} from "./api";
+import { validTimeZone, type Clock } from "./format";
 
 const FAST = 3_000;
 const SLOW = 30_000;
@@ -22,6 +29,12 @@ export const keys = {
   run: (id: number) => ["runs", "detail", id] as const,
   dashboard: ["dashboard"] as const,
   server: ["server"] as const,
+  settings: ["settings"] as const,
+  channelTypes: ["notifications", "channel-types"] as const,
+  channels: ["notifications", "channels"] as const,
+  notificationLog: ["notifications", "log"] as const,
+  excludePresets: ["exclude-presets"] as const,
+  updates: ["updates"] as const,
 };
 
 const isRunning = (job: Job) => job.status === "running" || job.health === "running";
@@ -157,4 +170,68 @@ export function useJobActions() {
   });
 
   return { run, pause, resume, remove, refresh };
+}
+
+export function useSettings() {
+  return useQuery({
+    queryKey: keys.settings,
+    queryFn: api.settings,
+    staleTime: 60_000,
+  });
+}
+
+/** Saves a partial update and replaces the cached settings with the answer. */
+export function useUpdateSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: SettingsPatch) => api.updateSettings(patch),
+    onSuccess: (settings: Settings) => {
+      client.setQueryData(keys.settings, settings);
+      // Metrics and update-check toggles change what these endpoints answer.
+      client.invalidateQueries({ queryKey: keys.updates });
+    },
+  });
+}
+
+/** The 12h/24h preference; 24h until settings load. */
+export function useClock(): Clock {
+  const { data } = useSettings();
+  return data?.general.clock ?? "24h";
+}
+
+export function useChannelTypes() {
+  return useQuery({
+    queryKey: keys.channelTypes,
+    queryFn: api.channelTypes,
+    staleTime: Infinity,
+  });
+}
+
+export function useChannels() {
+  return useQuery({ queryKey: keys.channels, queryFn: api.channels });
+}
+
+export function useNotificationLog(limit = 50) {
+  return useQuery({
+    queryKey: [...keys.notificationLog, limit],
+    queryFn: () => api.notificationLog(limit),
+    refetchInterval: SLOW,
+  });
+}
+
+export function useExcludePresets() {
+  return useQuery({
+    queryKey: keys.excludePresets,
+    queryFn: api.excludePresets,
+    staleTime: Infinity,
+  });
+}
+
+export function useUpdates() {
+  return useQuery({
+    queryKey: keys.updates,
+    queryFn: api.updates,
+    staleTime: 60 * 60_000,
+    refetchInterval: 6 * 60 * 60_000,
+  });
 }
