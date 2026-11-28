@@ -1,21 +1,153 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-raised: var(--raised);
+  --color-divider: var(--divider);
+  --color-link: var(--link);
+  --color-hover-row: var(--hover-row);
+  --color-success: var(--success);
+  --color-failed: var(--failed);
+  --color-running: var(--running);
+  --color-stale: var(--stale);
+  --color-paused: var(--paused);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Dark is the default so the page renders dark before the theme script runs. */
+:root,
+.dark {
+  color-scheme: dark;
+  --background: #0b0f14;
+  --foreground: #e6edf3;
+  --card: #121821;
+  --card-foreground: #e6edf3;
+  --popover: #121821;
+  --popover-foreground: #e6edf3;
+  --raised: #19212c;
+  --divider: #1c2532;
+  --hover-row: #151c27;
+  --primary: #2dd4bf;
+  --primary-foreground: #04201c;
+  --secondary: #19212c;
+  --secondary-foreground: #e6edf3;
+  --muted: #19212c;
+  --muted-foreground: #9aa7b6;
+  --accent: #19212c;
+  --accent-foreground: #e6edf3;
+  --destructive: #f87171;
+  --border: #243041;
+  --input: #243041;
+  --ring: #2dd4bf;
+  --link: #5eead4;
+  --success: #34d399;
+  --failed: #f87171;
+  --running: #60a5fa;
+  --stale: #fbbf24;
+  --paused: #9aa7b6;
+  --chart-1: #2dd4bf;
+  --chart-2: #60a5fa;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+  --radius: 0.5rem;
+}
+
+.light {
+  color-scheme: light;
+  --background: #f5f7fa;
+  --foreground: #0f1720;
+  --card: #ffffff;
+  --card-foreground: #0f1720;
+  --popover: #ffffff;
+  --popover-foreground: #0f1720;
+  --raised: #edf1f5;
+  --divider: #e4e9ef;
+  --hover-row: #f2f5f8;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --secondary: #edf1f5;
+  --secondary-foreground: #0f1720;
+  --muted: #edf1f5;
+  --muted-foreground: #556273;
+  --accent: #edf1f5;
+  --accent-foreground: #0f1720;
+  --destructive: #dc2626;
+  --border: #d3dbe4;
+  --input: #c9d2dd;
+  --ring: #0f766e;
+  --link: #0f766e;
+  --success: #059669;
+  --failed: #dc2626;
+  --running: #2563eb;
+  --stale: #b45309;
+  --paused: #64748b;
+  --chart-1: #0d9488;
+  --chart-2: #2563eb;
+  --chart-3: #059669;
+  --chart-4: #d97706;
+  --chart-5: #dc2626;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
